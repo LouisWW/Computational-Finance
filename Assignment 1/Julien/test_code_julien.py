@@ -173,13 +173,14 @@ class BlackScholes:
 
         if hedge_plot:
             x_hedge = [i / steps for i in range(steps)]
+            hedge_price = [ i for n,i in enumerate(self.price_path) if int(n%(self.steps/steps)) == 0]
             ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
 
             color = 'tab:blue'
             # we already handled the x-label with ax1
             ax2.set_ylabel('Delta', color=color)
             h = [self.hedge(t, s, hedge_setting)
-                 for t, s in zip(x_hedge, self.price_path)]
+                 for t, s in zip(x_hedge, hedge_price)]
             ax2.plot(x_hedge, h, color=color, label='Hedge delta')
             ax2.tick_params(axis='y', labelcolor=color)
 
