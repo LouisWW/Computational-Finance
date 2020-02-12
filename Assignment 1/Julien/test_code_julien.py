@@ -162,22 +162,13 @@ class BlackScholes:
 
     def plot_price_path(self, hedge_setting='Call', hedge_plot=True, steps=1):
         fig, ax1 = plt.subplots()
-<<<<<<< HEAD
         x_price = [i / self.steps for i in range(self.steps)]
-=======
-        x = [i / self.steps for i in range(self.steps)]
-        plt.plot(x, self.price_path, label="Discritized Black Scholes")
-        plt.xlabel("years")
-        plt.ylabel("Price")
-        plt.title("Stock price development over time")
-        plt.legend()
->>>>>>> c7fb2f1f0ef56224a72698c5b3221c320a65aaff
 
         color = 'tab:red'
         ax1.set_xlabel('years')
         ax1.set_ylabel('Price', color=color)
         ax1.plot(x_price, self.price_path, color=color,
-                 label="Discritized Blach Scholes")
+                 label="Discritized Black Scholes")
         ax1.tick_params(axis='y', labelcolor=color)
 
         if hedge_plot:
