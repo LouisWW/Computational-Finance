@@ -173,6 +173,11 @@ class BlackScholes:
         # plt.show()
         fig, ax1 = plt.subplots()
         x = [i / self.steps for i in range(self.steps)]
+        plt.plot(x, self.price_path, label="Discritized Black Scholes")
+        plt.xlabel("years")
+        plt.ylabel("Price")
+        plt.title("Stock price development over time")
+        plt.legend()
 
         color = 'tab:red'
         ax1.set_xlabel('years')
