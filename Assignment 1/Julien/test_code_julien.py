@@ -36,6 +36,9 @@ class BinTreeOption:
         self.create_price_tree()
         self.option = np.zeros((N + 1, N + 1))
 
+        # Create hedging tree
+        self.delta = np.zeros((N, N))
+
     def create_price_tree(self):
         """
         """
@@ -73,9 +76,10 @@ class BinTreeOption:
             self.recursive_usa_put()
 
         if self.array_out:
-            return [self.option[0, 0], self.price_tree, self.option]
+            return [self.option[0, 0], self.delta[0, 0], 
+                    self.price_tree, self.option, self.delta]
 
-        return self.option[0, 0]
+        return self.option[0, 0], self.delta[0, 0]
 
     def recursive_eu_option(self):
         """
@@ -85,6 +89,12 @@ class BinTreeOption:
                 self.option[j, i] = (self.discount * (self.p *
                                                       self.option[j, i + 1] + (1 - self.p) *
                                                       self.option[j + 1, i + 1]))
+
+                self.delta[j, i] = ((self.option[j, i + 1] -
+                                     self.option[j + 1, i + 1]) /
+                                    (self.price_tree[j, i + 1] -
+                                     self.price_tree[j + 1, i + 1]))
+                
 
     def recursive_usa_call(self):
         """
@@ -96,6 +106,11 @@ class BinTreeOption:
                                          (self.p * self.option[j, i + 1] +
                                           (1 - self.p) * self.option[j + 1, i + 1])])
 
+                self.delta[j, i] = ((self.option[j, i + 1] -
+                                     self.option[j + 1, i + 1]) /
+                                    (self.price_tree[j, i + 1] -
+                                     self.price_tree[j + 1, i + 1]))
+
     def recursive_usa_put(self):
         """
         """
@@ -105,6 +120,11 @@ class BinTreeOption:
                                          self.discount *
                                          (self.p * self.option[j, i + 1] +
                                           (1 - self.p) * self.option[j + 1, i + 1])])
+                self.delta[j, i] = ((self.option[j, i + 1] -
+                                     self.option[j + 1, i + 1]) /
+                                    (self.price_tree[j, i + 1] -
+                                     self.price_tree[j + 1, i + 1]))
+                                     
 
     def reset_tree(self):
         """
@@ -173,7 +193,8 @@ class BlackScholes:
 
         if hedge_plot:
             x_hedge = [i / steps for i in range(steps)]
-            hedge_price = [ i for n,i in enumerate(self.price_path) if int(n%(self.steps/steps)) == 0]
+            hedge_price = [i for n, i in enumerate(
+                self.price_path) if int(n % (self.steps/steps)) == 0]
             ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
 
             color = 'tab:blue'
@@ -204,28 +225,44 @@ class BlackScholes:
 
 if __name__ == "__main__":
 
-    tree1 = BinTreeOption(5, 5 / 12, 50, 0.4, 0.1, 50,
-                          market="USA", option_type="put", array_out=False)
-    tree2 = BinTreeOption(5, 5 / 12, 50, 0.4, 0.1, 50,
-                          market="EU", option_type="put", array_out=False)
+    tree_test = BinTreeOption(50, 1, 100, 0.2, 0.06, 99,
+                          market="USA", option_type="put", array_out=True)
+                          
+    price, delta, price_tree, option, delta_tree = tree_test.determine_price()
+    print("Price\n", price)
+    print("===============================")
+    print("Delta\n", delta)
+    print("===============================")
+    print("Price Tree\n", price_tree)
+    print("===============================")
+    print("Option Tree\n", option)
+    print("===============================")
+    print("Delta Tree\n", delta_tree)
+    print("===============================")
+    # tree1 = BinTreeOption(5, 5 / 12, 50, 0.4, 0.1, 50,
+    #                       market="USA", option_type="put", array_out=False)
+    # tree2 = BinTreeOption(5, 5 / 12, 50, 0.4, 0.1, 50,
+    #                       market="EU", option_type="put", array_out=False)
 
-    tree3 = BinTreeOption(50, 1, 100, 0.2, 0.06, 99,
-                          market="USA", option_type="call", array_out=False)
+    # tree3 = BinTreeOption(50, 1, 100, 0.2, 0.06, 99,
+    #                       market="USA", option_type="call", array_out=False)
 
-    tree4 = BinTreeOption(50, 1, 100, 0.2, 0.06, 99,
-                          market="EU", option_type="call", array_out=False)
+    # tree4 = BinTreeOption(50, 1, 100, 0.2, 0.06, 99,
+    #                       market="EU", option_type="call", array_out=False)
 
-    tree5 = BinTreeOption(50, 1, 100, 0.2, 0.06, 99,
-                          market="USA", option_type="put", array_out=False)
+    # tree5 = BinTreeOption(50, 1, 100, 0.2, 0.06, 99,
+    #                       market="USA", option_type="put", array_out=False)
 
-    tree6 = BinTreeOption(50, 1, 100, 0.2, 0.06, 99,
-                          market="EU", option_type="put", array_out=False)
+    # tree6 = BinTreeOption(50, 1, 100, 0.2, 0.06, 99,
+    #                       market="EU", option_type="put", array_out=False)
 
-    trees = [tree1, tree2, tree3, tree4, tree5, tree6]
-    for i, tree in enumerate(trees):
-        print(f"Price of Tree {i + 1} is", tree.determine_price())
-        print("===============================================")
+    # trees = [tree1, tree2, tree3, tree4, tree5, tree6]
+    # for i, tree in enumerate(trees):
+    #     price, delta = tree.determine_price()
+    #     print(f"Price of Tree {i + 1} is", price)
+    #     print(f"Delta of Tree {i + 1} is", delta)
+    #     print("===============================================")
 
-    bs_eu = BlackScholes(1, 100, 99, 0.06, 0.2, steps=50)
-    bs_eu.create_price_path()
-    bs_eu.plot_price_path(hedge_setting="Call", hedge_plot=True)
+    # bs_eu = BlackScholes(1, 100, 99, 0.06, 0.2, steps=50)
+    # bs_eu.create_price_path()
+    # bs_eu.plot_price_path(hedge_setting="Call", hedge_plot=True)
