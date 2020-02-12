@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 import scipy.stats as st
 
 
@@ -20,8 +21,8 @@ class BinTreeOption:
         self.market = market.upper()
         self.option_type = option_type.lower()
         self.array_out = array_out
-        assert self.market in ["EU", "USA"], "Market not found. Choose EU or USA"
-
+        assert self.market in [
+            "EU", "USA"], "Market not found. Choose EU or USA"
         assert self.option_type in ["call", "put"], "Non-existing option type."
 
         self.dt = T / N
@@ -113,12 +114,16 @@ class BinTreeOption:
 
 
 class BlackScholes:
-    def __init__(self, T, S0, K, r, sigma):
+    def __init__(self, T, S0, K, r, sigma, steps=1):
         self.T = T
         self.S0 = S0
         self.K = K
         self.r = r
         self.sigma = sigma
+        self.steps = steps
+        self.dt = T / steps
+        self.price = S0
+        self.price_path = np.zeros(steps)
 
     def call_price(self):
         """
@@ -138,13 +143,33 @@ class BlackScholes:
         d1 = (np.log(self.S0 / self.K) + (self.r + 0.5 * self.sigma ** 2)
               * self.T) / (self.sigma * np.sqrt(self.T))
         d2 = d1 - self.sigma * np.sqrt(self.T)
-        
-        put = ((self.K * np.exp(-self.r * self.T) 
-                * st.norm.cdf(-d2, 0.0, 1.0)) - self.S0 * 
-                                                st.norm.cdf(-d1, 0.0, 1.0))
+
+        put = ((self.K * np.exp(-self.r * self.T)
+                * st.norm.cdf(-d2, 0.0, 1.0)) - self.S0 *
+               st.norm.cdf(-d1, 0.0, 1.0))
 
         return put
 
+    def create_price_path(self):
+        """
+        """
+        for i in range(self.steps):
+            self.price_path[i] = self.price
+            dS = self.r * self.price * self.dt + self.sigma * \
+                self.price * np.random.normal(0, 1) * np.sqrt(self.dt)
+
+            self.price += dS
+
+    def plot_price_path(self):
+
+        fig = plt.figure()
+        x = [i / self.steps for i in range(self.steps)]
+        plt.plot(x, self.price_path, label="Discritized Blach Scholes")
+        plt.xlabel("years")
+        plt.ylabel("Price")
+        plt.title("Stock price development over time")
+        plt.legend()
+        plt.show()
 
 if __name__ == "__main__":
 
@@ -169,3 +194,7 @@ if __name__ == "__main__":
     for i, tree in enumerate(trees):
         print(f"Price of Tree {i + 1} is", tree.determine_price())
         print("===============================================")
+
+    bs_eu = BlackScholes(1, 100, 99, 0.06, 0.2, steps=50)
+    bs_eu.create_price_path()
+    bs_eu.plot_price_path()

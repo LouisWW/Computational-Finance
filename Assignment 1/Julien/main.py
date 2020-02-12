@@ -56,6 +56,7 @@ if __name__ == "__main__":
 
     prices_trees = [tree.determine_price() for tree in trees_call_eu]
     prices_bs = [bs_call_price] * len(steps)
+    
     # Make plot
     fig = plt.figure()
     plt.plot(steps, prices_trees, label="Binomial tree")
