@@ -160,16 +160,50 @@ class BlackScholes:
 
             self.price += dS
 
-    def plot_price_path(self):
-
-        fig = plt.figure()
+    def plot_price_path(self, hedge_setting='Call'):
+        #
+        # fig = plt.figure()
+        # x = [i / self.steps for i in range(self.steps)]
+        # plt.plot(x, self.price_path, label="Discritized Blach Scholes")
+        # plt.plot(x, [B.hedge(t, i) for i, t in zip(B.price_path, x)], label)
+        # plt.xlabel("years")
+        # plt.ylabel("Price")
+        # plt.title("Stock price development over time")
+        # plt.legend()
+        # plt.show()
+        fig, ax1 = plt.subplots()
         x = [i / self.steps for i in range(self.steps)]
-        plt.plot(x, self.price_path, label="Discritized Blach Scholes")
-        plt.xlabel("years")
-        plt.ylabel("Price")
-        plt.title("Stock price development over time")
-        plt.legend()
+
+        color = 'tab:red'
+        ax1.set_xlabel('years')
+        ax1.set_ylabel('Price', color=color)
+        ax1.plot(x, self.price_path, color=color, label="Discritized Blach Scholes")
+        ax1.tick_params(axis='y', labelcolor=color)
+
+        ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+
+        color = 'tab:blue'
+        ax2.set_ylabel('Delta', color=color)  # we already handled the x-label with ax1
+        ax2.plot(x, [self.hedge(t, s, hedge_setting) for t, s in zip(x, self.price_path)],
+                 color=color, label='Hedge delta')
+        ax2.tick_params(axis='y', labelcolor=color)
+
+        plt.title("Stock price and Delta development over time")
+        fig.tight_layout()  # otherwise the right y-label is slightly clipped
         plt.show()
+
+    def hedge(self, t, S, hedge_setting='Call'):
+
+        if hedge_setting == 'Call':
+            d1 = (np.log(S / self.K) + (self.r + 0.5 * self.sigma ** 2)
+                  * (self.T - t)) / (self.sigma * np.sqrt(self.T - t))
+            return st.norm.cdf(d1, 0.0, 1.0)
+
+        elif hedge_setting == 'Put':
+            d1 = (np.log(S / self.K) + (self.r + 0.5 * self.sigma ** 2)
+                  * (self.T - t)) / (self.sigma * np.sqrt(self.T - t))
+            return st.norm.cdf(-d1, 0.0, 1.0)
+
 
 if __name__ == "__main__":
 
