@@ -160,49 +160,45 @@ class BlackScholes:
 
             self.price += dS
 
-    def plot_price_path(self, hedge_setting='Call'):
-        #
-        # fig = plt.figure()
-        # x = [i / self.steps for i in range(self.steps)]
-        # plt.plot(x, self.price_path, label="Discritized Blach Scholes")
-        # plt.plot(x, [B.hedge(t, i) for i, t in zip(B.price_path, x)], label)
-        # plt.xlabel("years")
-        # plt.ylabel("Price")
-        # plt.title("Stock price development over time")
-        # plt.legend()
-        # plt.show()
+    def plot_price_path(self, hedge_setting='Call', hedge_plot=True, steps=1):
         fig, ax1 = plt.subplots()
-        x = [i / self.steps for i in range(self.steps)]
+        x_price = [i / self.steps for i in range(self.steps)]
 
         color = 'tab:red'
         ax1.set_xlabel('years')
         ax1.set_ylabel('Price', color=color)
-        ax1.plot(x, self.price_path, color=color, label="Discritized Blach Scholes")
+        ax1.plot(x_price, self.price_path, color=color,
+                 label="Discritized Blach Scholes")
         ax1.tick_params(axis='y', labelcolor=color)
 
-        ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+        if hedge_plot:
+            x_hedge = [i / steps for i in range(steps)]
+            ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
 
-        color = 'tab:blue'
-        ax2.set_ylabel('Delta', color=color)  # we already handled the x-label with ax1
-        ax2.plot(x, [self.hedge(t, s, hedge_setting) for t, s in zip(x, self.price_path)],
-                 color=color, label='Hedge delta')
-        ax2.tick_params(axis='y', labelcolor=color)
+            color = 'tab:blue'
+            # we already handled the x-label with ax1
+            ax2.set_ylabel('Delta', color=color)
+            h = [self.hedge(t, s, hedge_setting)
+                 for t, s in zip(x_hedge, self.price_path)]
+            ax2.plot(x_hedge, h, color=color, label='Hedge delta')
+            ax2.tick_params(axis='y', labelcolor=color)
 
         plt.title("Stock price and Delta development over time")
         fig.tight_layout()  # otherwise the right y-label is slightly clipped
-        plt.show()
+        # plt.show()
 
-    def hedge(self, t, S, hedge_setting='Call'):
-
-        if hedge_setting == 'Call':
-            d1 = (np.log(S / self.K) + (self.r + 0.5 * self.sigma ** 2)
-                  * (self.T - t)) / (self.sigma * np.sqrt(self.T - t))
+    def hedge(self, t, S, hedge_setting='call'):
+        hedge_setting = hedge_setting.lower()
+        d1 = (np.log(S / self.K) + (self.r + 0.5 * self.sigma ** 2)
+              * (self.T - t)) / (self.sigma * np.sqrt(self.T - t))
+        if hedge_setting == 'call':
             return st.norm.cdf(d1, 0.0, 1.0)
 
-        elif hedge_setting == 'Put':
-            d1 = (np.log(S / self.K) + (self.r + 0.5 * self.sigma ** 2)
-                  * (self.T - t)) / (self.sigma * np.sqrt(self.T - t))
-            return st.norm.cdf(-d1, 0.0, 1.0)
+        elif hedge_setting == 'put':
+            return -st.norm.cdf(-d1, 0.0, 1.0)
+        else:
+            print("Setting not found")
+            return None
 
 
 if __name__ == "__main__":
@@ -231,4 +227,4 @@ if __name__ == "__main__":
 
     bs_eu = BlackScholes(1, 100, 99, 0.06, 0.2, steps=50)
     bs_eu.create_price_path()
-    bs_eu.plot_price_path()
+    bs_eu.plot_price_path(hedge_setting="Call", hedge_plot=True)
