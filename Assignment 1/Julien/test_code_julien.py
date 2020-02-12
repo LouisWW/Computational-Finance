@@ -63,7 +63,7 @@ class BinTreeOption:
             self.option[:, self.N] = np.maximum(
                 np.zeros(self.N + 1), self.K - self.price_tree[:, self.N]
             )
-            self.recursive_eu_option()
+            self.recursive_eu_put()
 
         elif self.market == "USA" and self.option_type == "call":
             self.option[:, self.N] = np.maximum(
@@ -76,16 +76,23 @@ class BinTreeOption:
                 np.zeros(self.N + 1), self.K - self.price_tree[:, self.N])
             self.recursive_usa_put()
 
-        if self.array_out:
+        if self.array_out and self.market == "EU":
+            return [self.option[0, 0], self.delta[0, 0], self.t_delta[0, 0],
+                    self.price_tree, self.option, self.delta, self.t_delta]
+        elif self.array_out and self.market == "USA":
             return [self.option[0, 0], self.delta[0, 0], 
                     self.price_tree, self.option, self.delta]
-
+        elif not self.array_out and self.market == "EU":
+            return self.option[0, 0], self.delta[0, 0], self.t_delta[0, 0]
+        
         return self.option[0, 0], self.delta[0, 0]
 
     def recursive_eu_call(self):
         """
         """
+        t = self.T
         for i in np.arange(self.N - 1, -1, -1):
+            t -= self.dt
             for j in np.arange(0, i + 1):
                 self.option[j, i] = (self.discount * (self.p *
                                                       self.option[j, i + 1] + (1 - self.p) *
@@ -95,9 +102,13 @@ class BinTreeOption:
                                      self.option[j + 1, i + 1]) /
                                     (self.price_tree[j, i + 1] -
                                      self.price_tree[j + 1, i + 1]))
+                d1 = (np.log(self.S0 / self.K) + (self.r + 0.5 * self.sigma ** 2) * (self.T - t)) / (self.sigma * np.sqrt(self.T - t))
+                self.t_delta[j, i] = st.norm.cdf(d1, 0.0, 1.0)
                 
     def recursive_eu_put(self):
+        t = self.T
         for i in np.arange(self.N - 1, -1, -1):
+            t -= self.dt
             for j in np.arange(0, i + 1):
                 self.option[j, i] = (self.discount * (self.p *
                                                       self.option[j, i + 1] + (1 - self.p) *
@@ -108,7 +119,8 @@ class BinTreeOption:
                                     (self.price_tree[j, i + 1] -
                                      self.price_tree[j + 1, i + 1]))
                 
-                # d1 = (np.log(self.S0 / self.K) + (self.r + 0.5 * self.sigma ** 2) * (self.T - )) / (self.sigma * np.sqrt(self.T))
+                d1 = (np.log(self.S0 / self.K) + (self.r + 0.5 * self.sigma ** 2) * (self.T - t)) / (self.sigma * np.sqrt(self.T - t))
+                self.t_delta[j, i] = -st.norm.cdf(-d1, 0.0, 1.0)
 
     def recursive_usa_call(self):
         """
@@ -240,18 +252,22 @@ class BlackScholes:
 if __name__ == "__main__":
 
     tree_test = BinTreeOption(50, 1, 100, 0.2, 0.06, 99,
-                          market="USA", option_type="put", array_out=True)
+                          market="EU", option_type="put", array_out=True)
                           
-    price, delta, price_tree, option, delta_tree = tree_test.determine_price()
+    price, delta, t_delta, price_tree, option, delta_tree, t_delta_tree = tree_test.determine_price()
     print("Price\n", price)
     print("===============================")
     print("Delta\n", delta)
+    print("===============================")
+    print("Theoretical Delta\n", t_delta)
     print("===============================")
     print("Price Tree\n", price_tree)
     print("===============================")
     print("Option Tree\n", option)
     print("===============================")
     print("Delta Tree\n", delta_tree)
+    print("===============================")
+    print("Theoretical Delta Tree\n", t_delta_tree)
     print("===============================")
     # tree1 = BinTreeOption(5, 5 / 12, 50, 0.4, 0.1, 50,
     #                       market="USA", option_type="put", array_out=False)
