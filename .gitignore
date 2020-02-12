@@ -7,6 +7,3 @@
 # Ignore all pycache subfolders
 __pycache__/
 *.pyc
-
-# Ignore all .ipynb files
-*.ipynb
