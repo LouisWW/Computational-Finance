@@ -36,8 +36,9 @@ class BinTreeOption:
         self.create_price_tree()
         self.option = np.zeros((N + 1, N + 1))
 
-        # Create hedging tree
+        # Create hedging tree and theoretical hedging tree
         self.delta = np.zeros((N, N))
+        self.t_delta = np.zeros((N, N))
 
     def create_price_tree(self):
         """
@@ -56,7 +57,7 @@ class BinTreeOption:
             self.option[:, self.N] = np.maximum(
                 np.zeros(self.N + 1), self.price_tree[:, self.N] - self.K
             )
-            self.recursive_eu_option()
+            self.recursive_eu_call()
 
         elif self.market == "EU" and self.option_type == "put":
             self.option[:, self.N] = np.maximum(
@@ -81,7 +82,7 @@ class BinTreeOption:
 
         return self.option[0, 0], self.delta[0, 0]
 
-    def recursive_eu_option(self):
+    def recursive_eu_call(self):
         """
         """
         for i in np.arange(self.N - 1, -1, -1):
@@ -95,6 +96,19 @@ class BinTreeOption:
                                     (self.price_tree[j, i + 1] -
                                      self.price_tree[j + 1, i + 1]))
                 
+    def recursive_eu_put(self):
+        for i in np.arange(self.N - 1, -1, -1):
+            for j in np.arange(0, i + 1):
+                self.option[j, i] = (self.discount * (self.p *
+                                                      self.option[j, i + 1] + (1 - self.p) *
+                                                      self.option[j + 1, i + 1]))
+
+                self.delta[j, i] = ((self.option[j, i + 1] -
+                                     self.option[j + 1, i + 1]) /
+                                    (self.price_tree[j, i + 1] -
+                                     self.price_tree[j + 1, i + 1]))
+                
+                # d1 = (np.log(self.S0 / self.K) + (self.r + 0.5 * self.sigma ** 2) * (self.T - )) / (self.sigma * np.sqrt(self.T))
 
     def recursive_usa_call(self):
         """
