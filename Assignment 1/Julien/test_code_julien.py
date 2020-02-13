@@ -260,11 +260,6 @@ class BlackScholes:
         ax1.tick_params(axis='y', labelcolor=color)
 
         if hedge_plot:
-
-            x_hedge = [i / steps for i in range(steps)]
-            hedge_price = [i for n, i in enumerate(
-                self.price_path) if int(n % (self.steps/steps)) == 0]
-
             ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
             color = 'tab:blue'
             # we already handled the x-label with ax1
