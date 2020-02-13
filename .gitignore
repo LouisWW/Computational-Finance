@@ -1,0 +1,9 @@
+# Ignore all .npy files
+*.npy
+
+# Ignore all .ds_store files
+**/.DS_Store
+
+# Ignore all pycache subfolders
+__pycache__/
+*.pyc
