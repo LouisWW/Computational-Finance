@@ -125,6 +125,9 @@ class BlackScholes:
         self.price = S0
         self.price_path = np.zeros(steps)
 
+        self.delta_list = None
+        self.x_hedge = None
+
     def call_price(self):
         """
         """
@@ -160,7 +163,46 @@ class BlackScholes:
 
             self.price += dS
 
-    def plot_price_path(self, hedge_setting='Call', hedge_plot=True, steps=1):
+    def create_hedge(self, steps=1, hedge_setting='Call'):
+        x_hedge = [j / steps for j in range(steps)]
+
+        hedge_price = [j for n, j in enumerate(self.price_path) if int(n % (self.steps / steps)) == 0]
+        delta_list = [self.hedge(t, s, hedge_setting) for t, s in zip(x_hedge, hedge_price)]
+
+        prev, profit, price = 0, 0, 0
+        interest =  self.r * (self.T/steps)
+
+        for delta, price in zip(delta_list, hedge_price):
+            profit += prev * price  # verkoop huidige portfolie
+            profit -= delta * price  # Koop nieuwe porfolio
+            profit -= (delta * price) * interest  # Betalen geleende geld
+            prev = delta
+
+        if hedge_setting.lower() == 'call':
+            profit += (delta) * price # koop resterende deel
+            # delta = 1
+            profit -= self.K # verkoop plicht
+            profit -= self.call_price()
+
+        elif hedge_setting.lower() == 'put':
+            profit += (1 + delta) * price
+            profit -= self.K
+            profit -= self.put_price()
+        else:
+            print(hedge_setting, 'Not an expected value')
+            return None
+
+        # For testing
+        # print('price', price)
+        # print('profit', profit)
+        # print('call_price', self.call_price())
+
+        self.delta_list = delta_list
+        self.x_hedge = x_hedge
+
+        return profit
+
+    def plot_price_path(self, hedge_plot=True):
         fig, ax1 = plt.subplots()
         x_price = [i / self.steps for i in range(self.steps)]
 
@@ -172,16 +214,11 @@ class BlackScholes:
         ax1.tick_params(axis='y', labelcolor=color)
 
         if hedge_plot:
-            x_hedge = [i / steps for i in range(steps)]
-            hedge_price = [ i for n,i in enumerate(self.price_path) if int(n%(self.steps/steps)) == 0]
             ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
-
             color = 'tab:blue'
             # we already handled the x-label with ax1
             ax2.set_ylabel('Delta', color=color)
-            h = [self.hedge(t, s, hedge_setting)
-                 for t, s in zip(x_hedge, hedge_price)]
-            ax2.plot(x_hedge, h, color=color, label='Hedge delta')
+            ax2.plot(self.x_hedge, self.delta_list, color=color, label='Hedge delta')
             ax2.tick_params(axis='y', labelcolor=color)
 
         plt.title("Stock price and Delta development over time")
