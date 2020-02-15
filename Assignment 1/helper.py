@@ -87,7 +87,7 @@ def binomial_tree_2( T, S, K, r, sigma, market, option_type,save_plot=False):
     plt.title(market+" "+option_type+" option price for increasing time steps",fontsize=14,fontweight='bold')
     plt.legend()
     if save_plot:
-        plt.savefig("figures/"+market+"_"+option_type+"_running_time",dpi=300)
+        plt.savefig("figures/"+market+"_"+option_type+"_time_steps",dpi=300)
 
 
     plt.figure()
@@ -97,6 +97,9 @@ def binomial_tree_2( T, S, K, r, sigma, market, option_type,save_plot=False):
     plt.xticks(fontweight='bold')
     plt.yticks(fontweight='bold')
     plt.title("Running time vs. Steps",fontsize=14,fontweight='bold')
+    if save_plot:
+        plt.savefig("figures/"+market+"_"+option_type+"_running_time",dpi=300)
+
 
     plt.show()
     plt.close()

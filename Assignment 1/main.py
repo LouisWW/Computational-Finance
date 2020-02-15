@@ -2,7 +2,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from collections import defaultdict
-from test_code_julien import BinTreeOption, BlackScholes
+from Binomial_tree import BinTreeOption, BlackScholes
 
 
 if __name__ == "__main__":
