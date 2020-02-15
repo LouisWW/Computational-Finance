@@ -21,8 +21,7 @@ class BinTreeOption:
         self.market = market.upper()
         self.option_type = option_type.lower()
         self.array_out = array_out
-        assert self.market in [
-            "EU", "USA"], "Market not found. Choose EU or USA"
+        assert self.market in ["EU", "USA"], "Market not found. Choose EU or USA"
         assert self.option_type in ["call", "put"], "Non-existing option type."
 
         self.dt = T / N
