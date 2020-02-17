@@ -174,24 +174,24 @@ class BlackScholes:
         self.delta_list = None
         self.x_hedge = None
 
-    def call_price(self):
+    def call_price(self, t=0):
         """
         """
         d1 = (np.log(self.S0 / self.K) + (self.r + 0.5 * self.sigma ** 2)
-              * self.T) / (self.sigma * np.sqrt(self.T))
-        d2 = d1 - self.sigma * np.sqrt(self.T)
+              * (self.T - t)) / (self.sigma * np.sqrt(self.T - t))
+        d2 = d1 - self.sigma * np.sqrt(self.T - t)
 
         call = (self.S0 * st.norm.cdf(d1, 0.0, 1.0) - self.K *
                 np.exp(-self.r * self.T) * st.norm.cdf(d2, 0.0, 1.0))
 
         return call
 
-    def put_price(self):
+    def put_price(self, t=0):
         """
         """
         d1 = (np.log(self.S0 / self.K) + (self.r + 0.5 * self.sigma ** 2)
-              * self.T) / (self.sigma * np.sqrt(self.T))
-        d2 = d1 - self.sigma * np.sqrt(self.T)
+              * (self.T - t)) / (self.sigma * np.sqrt(self.T - t))
+        d2 = d1 - self.sigma * np.sqrt(self.T - t)
 
         put = ((self.K * np.exp(-self.r * self.T)
                 * st.norm.cdf(-d2, 0.0, 1.0)) - self.S0 *
@@ -217,34 +217,40 @@ class BlackScholes:
 
         prev, profit, price = 0, 0, 0
         interest =  self.r * (self.T/steps)
+        dt = self.T/steps
+        t = 0
 
         for delta, price in zip(delta_list, hedge_price):
             profit += prev * price  # verkoop huidige portfolie
             profit -= delta * price  # Koop nieuwe porfolio
             profit -= (delta * price) * interest  # Betalen geleende geld
             prev = delta
+            t += dt
+
+        # profit += prev * price  # verkoop huidige portfolie
+        print('p ',profit)
 
         if hedge_setting.lower() == 'call':
-            profit += (delta) * price # koop resterende deel
+            profit += (-delta) * price # koop resterende deel
             # delta = 1
             profit -= self.K # verkoop plicht
-            profit -= self.call_price()
 
         elif hedge_setting.lower() == 'put':
-            profit += (1 + delta) * price
+            profit += -delta * (self.K - price)
             profit -= self.K
-            profit -= self.put_price()
         else:
             print(hedge_setting, 'Not an expected value')
             return None
 
         # For testing
-        # print('price', price)
-        # print('profit', profit)
-        # print('call_price', self.call_price())
+        print('price', price)
+        print('k', self.K)
+        print('profit', profit)
+        print('put', self.put_price())
 
         self.delta_list = delta_list
         self.x_hedge = x_hedge
+        self.hedge_price = hedge_price
 
         return profit
 
@@ -279,7 +285,7 @@ class BlackScholes:
             return st.norm.cdf(d1, 0.0, 1.0)
 
         elif hedge_setting == 'put':
-            return -st.norm.cdf(-d1, 0.0, 1.0)
+            return -st.norm.cdf(d1, 0.0, 1.0)
         else:
             print("Setting not found")
             return None
