@@ -4,7 +4,7 @@ from collections import defaultdict
 from Binomial_tree import BinTreeOption, BlackScholes
 import time
 
-def binomial_tree_1(N, T, S, K, r, sigma,market,option_type,save_plot=False):
+def binomial_tree_1(N, T, S, K, r,market,option_type,save_plot=False):
     '''
 
     :param N: number of steps
@@ -19,14 +19,14 @@ def binomial_tree_1(N, T, S, K, r, sigma,market,option_type,save_plot=False):
 
     # Analyse various levels of volatility
     sigmas = np.linspace(0.01, 0.99, 100)
-    trees_call_eu = [
+    trees= [
      BinTreeOption(N, T, S, s, r, K, market, option_type)
      for s in sigmas
      ]
-    bs_eus = [BlackScholes(T, S, K, r, s) for s in sigmas]
+    bs = [BlackScholes(T, S, K, r, s) for s in sigmas]
 
     call_prices = defaultdict(list)
-    for tree, bs in zip(trees_call_eu, bs_eus):
+    for tree, bs in zip(trees, bs):
      call_prices["Binomial tree"].append(tree.determine_price())
      call_prices["Black Scholes"].append(bs.call_price())
 
@@ -104,5 +104,49 @@ def binomial_tree_2( T, S, K, r, sigma, market, option_type,save_plot=False):
     plt.show()
     plt.close()
 
-def binomial_tree_3(T, S, K, r, sigma, market, option_type, save_plot=False):
-    tree=BinTreeOption(step, T, S, sigma, r, K, market, option_type)
+def binomial_tree_3(N,T, S, K, r, market, option_type,save_plot=True):
+    '''
+
+    :param N: number of steps
+    :param T: period
+    :param S: stock price
+    :param K: strick price
+    :param r: interest rate
+    :param sigma: volatility
+    :param market: Eu or USA
+    :return:   price of option & delta
+    '''
+
+    # Analyse various levels of volatility
+    sigmas = np.linspace(0.01, 0.99, 100)
+    trees = [
+        BinTreeOption(N, T, S, s, r, K, market, option_type)
+        for s in sigmas
+    ]
+    bs_list = [BlackScholes(T, S, K, r, s) for s in sigmas]
+
+    call_prices = defaultdict(list)
+    for tree, bs in zip(trees, bs_list):
+        call_prices["Binomial tree"].append(tree.determine_price())
+        call_prices["Black Scholes"].append(bs.create_hedge())
+
+    for i in bs_list:
+
+        print(i.delta_list[-1])
+
+
+
+    # # Make plot
+    plt.figure()
+    plt.plot(sigmas, [i[1] for i in call_prices["Binomial tree"]], label="Binomial tree")
+    #plt.plot(sigmas, call_delta["Black Scholes"], label="Black Scholes")
+    plt.xlabel("Volatility (%) ",fontsize=12,fontweight='bold')
+    plt.ylabel(r"$\Delta$ (%)",fontsize=12,fontweight='bold')
+    plt.xticks(fontweight='bold')
+    plt.yticks(fontweight='bold')
+    plt.title(market+" "+option_type+r" $\Delta$ for various levels of volatility",fontsize=14,fontweight='bold')
+    plt.legend()
+    if save_plot:
+        plt.savefig("figures/"+market+"_"+option_type+"_volatility_delta",dpi=300)
+    plt.show()
+    plt.close()

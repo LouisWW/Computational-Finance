@@ -82,9 +82,17 @@ if __name__ == "__main__":
 import helper as helper
 
 
-#helper.binomial_tree_1(50, 1, 100, 99, 0.06,0.2,'EU',"call",save_plot=True)
+# exercise 1.1
+# helper.binomial_tree_1(50, 1, 100, 99, 0.06,'EU',"call",save_plot=True)
+#helper.binomial_tree_1(50, 1, 100, 99, 0.06,'EU',"put",save_plot=True)
 
-helper.binomial_tree_2(1, 100, 99, 0.06, 0.2,'EU',"call",save_plot=True)
+# exercise 1.2
+#helper.binomial_tree_2(1, 100, 99, 0.06, 0.2,'EU',"call",save_plot=True)
 
-#helper.binomial_tree_3(50,1, 100, 99, 0.06, 0.2,'EU',"call",save_plot=True)
 
+# exercise 1.3
+helper.binomial_tree_3(50,1, 100, 99, 0.06,'EU',"call",save_plot=True)
+
+# exercise 1.4 is the same as 1.1 with different arguments
+#helper.binomial_tree_1(50, 1, 100, 99, 0.06,0.2,'USA',"put",save_plot=True)
+#helper.binomial_tree_2(1, 100, 99, 0.06, 0.2,'USA',"put",save_plot=True)
