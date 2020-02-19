@@ -227,7 +227,7 @@ class BlackScholes:
             t += dt
 
         # profit += prev * price  # verkoop huidige portfolie
-        print('p ',profit)
+        #print('p ',profit)
 
         if hedge_setting.lower() == 'call':
             profit += (-delta) * price # koop resterende deel
@@ -242,10 +242,10 @@ class BlackScholes:
             return None
 
         # For testing
-        print('price', price)
-        print('k', self.K)
-        print('profit', profit)
-        print('put', self.put_price())
+       # print('price', price)
+       # print('k', self.K)
+       # print('profit', profit)
+       # print('put', self.put_price())
 
         self.delta_list = delta_list
         self.x_hedge = x_hedge

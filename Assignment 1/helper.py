@@ -3,6 +3,13 @@ import matplotlib.pyplot as plt
 from collections import defaultdict
 from Binomial_tree import BinTreeOption, BlackScholes
 import time
+import tqdm
+import multiprocessing
+
+global progress_bar
+
+
+
 
 def binomial_tree_1(N, T, S, K, r,market,option_type,save_plot=False):
     '''
@@ -46,7 +53,18 @@ def binomial_tree_1(N, T, S, K, r,market,option_type,save_plot=False):
     plt.close()
 
 
-def binomial_tree_2( T, S, K, r, sigma, market, option_type,save_plot=False):
+
+steps = list(range(20, 500,5))
+progress_bar = tqdm.tqdm(total=len(steps))
+
+def worker(tree):
+    progress_bar.update(1)
+    return tree.determine_price()
+
+
+
+
+def binomial_tree_2( T, S, K, r, sigma, market, option_type,save_plot=False,run_time=True):
     '''
     :param T: period
     :param S: stock price
@@ -58,15 +76,26 @@ def binomial_tree_2( T, S, K, r, sigma, market, option_type,save_plot=False):
     '''
 
     # # Analyse time steps
-    trees=[]
-    running_time=[]
-    steps = list(range(1, 100))
-    for step in steps:
-        start_time=time.time()
-        trees.append(BinTreeOption(step, T, S, sigma, r, K, market, option_type))
-        running_time.append((time.time()-start_time)*100)
 
-    prices_trees = [tree.determine_price() for tree in trees]
+    steps = list(range(20, 500,5))
+
+    parralel_time=time.time()
+
+
+    trees = [
+        BinTreeOption(step, T, S, sigma, r, K, market, option_type)
+        for step in steps
+    ]
+    NUM_CORE = 3
+    pool = multiprocessing.Pool(NUM_CORE)
+    prices_trees = pool.map(worker, ((tree) for tree in trees))
+    pool.close()
+    pool.join()
+
+    print("parallel time ",time.time()-parralel_time)
+
+
+
 
     bs = BlackScholes(T, S, K, r, sigma)
     if option_type=='call':
@@ -90,19 +119,37 @@ def binomial_tree_2( T, S, K, r, sigma, market, option_type,save_plot=False):
         plt.savefig("figures/"+market+"_"+option_type+"_time_steps",dpi=300)
 
 
-    plt.figure()
-    plt.plot(steps, running_time, label="Running time")
-    plt.xlabel("Time steps (a.u.)",fontsize=12,fontweight='bold')
-    plt.ylabel("Running Time (ms)",fontsize=12,fontweight='bold')
-    plt.xticks(fontweight='bold')
-    plt.yticks(fontweight='bold')
-    plt.title("Running time vs. Steps",fontsize=14,fontweight='bold')
-    if save_plot:
-        plt.savefig("figures/"+market+"_"+option_type+"_running_time",dpi=300)
+    ### Get the running ###
+
+    if run_time:
+        repetition = 20
+        running_time_matrix = np.zeros((len(steps) + 1, repetition))
+        steps = list(range(1, 100))
+        for i in range(repetition):
+            for step in steps:
+                start_time=time.time()
+                tree =BinTreeOption(step, T, S, sigma, r, K, market, option_type)
+                running_time=(time.time()-start_time)*100
+                running_time_matrix[step][i]=running_time
+
+        mean_running_time=np.mean(running_time_matrix,1)
+        mean_running_time=np.delete(mean_running_time,0)
+
+        plt.figure()
+        plt.plot(steps, mean_running_time, label="Running time")
+        plt.xlabel("Time steps (a.u.)",fontsize=12,fontweight='bold')
+        plt.ylabel("Running Time (ms)",fontsize=12,fontweight='bold')
+        plt.legend()
+        plt.xticks(fontweight='bold')
+        plt.yticks(fontweight='bold')
+        plt.title("Running time vs. Steps",fontsize=14,fontweight='bold')
+        if save_plot:
+            plt.savefig("figures/"+market+"_"+option_type+"_running_time",dpi=300)
 
 
-    plt.show()
-    plt.close()
+        plt.show()
+        plt.close()
+
 
 def binomial_tree_3(N,T, S, K, r, market, option_type,save_plot=True):
     '''
@@ -128,18 +175,13 @@ def binomial_tree_3(N,T, S, K, r, market, option_type,save_plot=True):
     call_prices = defaultdict(list)
     for tree, bs in zip(trees, bs_list):
         call_prices["Binomial tree"].append(tree.determine_price())
-        call_prices["Black Scholes"].append(bs.create_hedge())
-
-    for i in bs_list:
-
-        print(i.delta_list[-1])
 
 
 
     # # Make plot
     plt.figure()
     plt.plot(sigmas, [i[1] for i in call_prices["Binomial tree"]], label="Binomial tree")
-    #plt.plot(sigmas, call_delta["Black Scholes"], label="Black Scholes")
+    plt.plot(sigmas, [i[2] for i in call_prices["Binomial tree"]], label="Black Scholes")
     plt.xlabel("Volatility (%) ",fontsize=12,fontweight='bold')
     plt.ylabel(r"$\Delta$ (%)",fontsize=12,fontweight='bold')
     plt.xticks(fontweight='bold')
