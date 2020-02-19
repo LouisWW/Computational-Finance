@@ -208,51 +208,46 @@ class BlackScholes:
 
             self.price += dS
 
-    def create_hedge(self, steps=1, hedge_setting='Call'):
+    d def create_hedge(self, steps=1, hedge_setting='Call'):
+        # time steps
         x_hedge = [j / steps for j in range(steps)]
 
+        # Check if price path is made
+        if self.price_path[-1] == 0:
+            self.create_price_path()
+
+        # corrected current price for hedge time intervals and all deltas for a given time
         hedge_price = [j for n, j in enumerate(self.price_path) if int(n % (self.steps / steps)) == 0]
         delta_list = [self.hedge(t, s, hedge_setting) for t, s in zip(x_hedge, hedge_price)]
 
-        prev, profit, price = 0, 0, 0
-        interest =  self.r * (self.T/steps)
-        dt = self.T/steps
-        t = 0
+        # New time step and interest for given interval
+        dt = self.T / steps
+        interest = self.r * dt
 
-        for delta, price in zip(delta_list, hedge_price):
-            profit += prev * price  # verkoop huidige portfolie
-            profit -= delta * price  # Koop nieuwe porfolio
-            profit -= (delta * price) * interest  # Betalen geleende geld
-            prev = delta
-            t += dt
+        # set iterables
+        delta_t = 0
+        current_stock_price = 0
 
-        # profit += prev * price  # verkoop huidige portfolie
-        #print('p ',profit)
+        # set loop variables
+        previous_delta = delta_t
+        bank = self.call_price()
 
-        if hedge_setting.lower() == 'call':
-            profit += (-delta) * price # koop resterende deel
-            # delta = 1
-            profit -= self.K # verkoop plicht
+        # loop over the time step and hedge for every time step
+        for delta_t, current_stock_price in zip(delta_list, hedge_price):
+            cost = (delta_t - previous_delta) * current_stock_price
+            bank = bank * math.exp(interest) - cost
+            previous_delta = delta_t
 
-        elif hedge_setting.lower() == 'put':
-            profit += -delta * (self.K - price)
-            profit -= self.K
-        else:
-            print(hedge_setting, 'Not an expected value')
-            return None
+        # Calculate the profit when t = T
+        profit = bank + (current_stock_price * delta_t) - max([current_stock_price - self.K, 0])
 
-        # For testing
-       # print('price', price)
-       # print('k', self.K)
-       # print('profit', profit)
-       # print('put', self.put_price())
-
+        # Save values
         self.delta_list = delta_list
         self.x_hedge = x_hedge
         self.hedge_price = hedge_price
 
         return profit
-
+    
     def plot_price_path(self, hedge_plot=True):
         fig, ax1 = plt.subplots()
         x_price = [i / self.steps for i in range(self.steps)]
