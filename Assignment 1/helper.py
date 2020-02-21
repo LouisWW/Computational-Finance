@@ -5,6 +5,8 @@ from Binomial_tree import BinTreeOption, BlackScholes
 import time
 import tqdm
 import multiprocessing
+import math
+import yfinance as yf  
 
 global progress_bar
 
@@ -192,3 +194,160 @@ def binomial_tree_3(N,T, S, K, r, market, option_type,save_plot=True):
         plt.savefig("figures/"+market+"_"+option_type+"_volatility_delta",dpi=300)
     plt.show()
     plt.close()
+
+def real_stock_data():
+    
+    years = 1
+    rate = 0.06
+    
+    def fill_year(data, open_close='Open'):
+    
+        if open_close == "Open":
+            time_serie = data.Open
+        elif open_close == 'Close':
+            time_serie = data.Close
+        else:
+            print(open_close, 'is not knows')
+            return None
+
+        n_days_in_years  = 365
+        days = np.zeros(n_days_in_years)
+
+        i = 0
+        s = 0
+
+        for start, timestamp in enumerate(time_serie.index):
+            if timestamp.weekday() == 0:
+                break
+
+        for value in time_serie[start:]:
+            days[i] = value
+            i += 1
+            s += 1
+            if s%5 == 0:
+                days[i] = value
+                days[i + 1] = value
+                i += 2
+
+            if i == 365:
+                break
+
+        return days
+
+    def get_data(stock='AAPL', frm='2019-01-01', till='2020-02-01'):
+        data = yf.download(stock, frm, till)
+        return data
+
+    def get_implied_volatility(data):
+        volatility = np.std(data) / np.mean(data)
+        return volatility
+
+    def plot_price_path(B, title, hedge_plot=True):
+        fig, ax1 = plt.subplots()
+        x_price = [i / B.steps for i in range(B.steps)]
+        x_price = [i for i in range(1, 366)]
+
+        color = 'tab:red'
+        ax1.set_xlabel('Days')
+        ax1.set_ylabel('Price', color=color)
+        ax1.plot(x_price, B.price_path, color=color,
+                 label="Discritized Black Scholes")
+        ax1.tick_params(axis='y', labelcolor=color)
+
+        if hedge_plot:
+            ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+            color = 'tab:blue'
+            print('plot2')
+            # we already handled the x-label with ax1
+            ax2.set_ylabel('Delta', color=color)
+            ax2.scatter(B.x_hedge, B.delta_list, color=color, label='Hedge delta')
+            ax2.plot(B.x_hedge, B.delta_list, linestyle='--' , color=color)
+            ax2.tick_params(axis='y', labelcolor=color)
+
+    plt.title(title)
+    plt.tight_layout()
+    fig.savefig(title+'.png')
+    
+    
+    data = fill_year(get_data(stock='AAPL'), open_close='Open')
+    sigma = get_implied_volatility(data)
+    steps = 365
+    
+    B = BlackScholes(years, data[0], data[0] - 1, rate, sigma, steps)
+    B.price_path = data
+    print('profit of Apple stocks:', B.create_hedge(52))
+
+    B.x_hedge = [i*7 for i in range(0, 52)]
+    plot_price_path(B, 'Apple stocks simulation')
+
+    data = fill_year(get_data(stock='RDS-A'), open_close='Open')
+    sigma = get_implied_volatility(data)
+
+    B = BlackScholes(years, data[0], data[0] - 1, rate, sigma, steps)
+    B.price_path = data
+    print('profit of Shell simuation:', B.create_hedge(52))
+
+    B.x_hedge = [i*7 for i in range(0, 52)]
+    plot_price_path(B, 'Shell stocks simulation')
+    
+def profit_histogram():
+    steps = 365
+    years = 1
+    start_price = 100
+    strike_price = 99
+    rate = 0.06
+    volatility = 0.2
+    
+    for i in range(1000):
+        B = jc.BlackScholes(years, start_price, strike_price, rate, volatility, steps)
+        prof[i] = B.create_hedge(steps)
+
+    fig = plt.figure()
+    plt.hist(prof, bins=20, label=f"with mean: {round(np.mean(prof), 3)}")
+    plt.xlabel('Profit')
+    plt.ylabel('Frequency')
+    plt.title('Hedging delta every day')
+    plt.legend()
+    plt.tight_layout()
+    fig.savefig('hedgedeltaday.png', dpi=300)
+    
+    steps = 52
+    for i in range(1000):
+        B = jc.BlackScholes(years, start_price, strike_price, rate, volatility, steps)
+        prof[i] = B.create_hedge(steps)
+
+    fig = plt.figure()
+    plt.hist(prof, bins=20, label=f"with mean: {round(np.mean(prof), 3)}")
+    plt.xlabel('Profit')
+    plt.ylabel('Frequency')
+    plt.title('Hedging delta every week')
+    plt.legend()
+    plt.tight_layout()
+    fig.savefig('hedgedeltaweek.png', dpi=300)
+
+def all_profit_histograms():
+    price_steps = 365
+    years = 1
+    start_price = 100
+    strike_price = 99
+    rate = 0.06
+    volatility = 0.2
+    fig = plt.figure()
+
+    steps_array = []
+    for steps in [10, 50, 100, 200, 300]:
+        prof = np.zeros(1000)
+        for i in range(1000):
+            B = jc.BlackScholes(years, start_price, strike_price, rate, volatility, price_steps)
+            prof[i] = B.create_hedge(steps)
+
+        plt.hist(prof, bins=20, label=f'n={steps}')
+        steps_array.append(np.mean(prof))
+
+    plt.xlabel('Profit')
+    plt.ylabel('Frequency')
+    plt.title('Hedging delta different intervals')
+    plt.legend()
+    plt.tight_layout()
+
+    fig.savefig('different_steps.png')
