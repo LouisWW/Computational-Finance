@@ -1,7 +1,18 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+Created on Friday Feb 20 2020
+This code was implemented by
+Louis Weyland, Floris Fok and Julien Fer
+"""
+
+
+
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.stats as st
-
+import math
 
 class BinTreeOption:
     def __init__(
@@ -208,7 +219,7 @@ class BlackScholes:
 
             self.price += dS
 
-    d def create_hedge(self, steps=1, hedge_setting='Call'):
+    def create_hedge(self, steps=1, hedge_setting='Call'):
         # time steps
         x_hedge = [j / steps for j in range(steps)]
 
