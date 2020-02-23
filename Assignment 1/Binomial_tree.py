@@ -1,7 +1,18 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+Created on Friday Feb 20 2020
+This code was implemented by
+Louis Weyland, Floris Fok and Julien Fer
+"""
+
+
+
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.stats as st
-
+import math
 
 class BinTreeOption:
     def __init__(
@@ -21,8 +32,7 @@ class BinTreeOption:
         self.market = market.upper()
         self.option_type = option_type.lower()
         self.array_out = array_out
-        assert self.market in [
-            "EU", "USA"], "Market not found. Choose EU or USA"
+        assert self.market in ["EU", "USA"], "Market not found. Choose EU or USA"
         assert self.option_type in ["call", "put"], "Non-existing option type."
 
         self.dt = T / N
@@ -174,24 +184,24 @@ class BlackScholes:
         self.delta_list = None
         self.x_hedge = None
 
-    def call_price(self):
+    def call_price(self, t=0):
         """
         """
         d1 = (np.log(self.S0 / self.K) + (self.r + 0.5 * self.sigma ** 2)
-              * self.T) / (self.sigma * np.sqrt(self.T))
-        d2 = d1 - self.sigma * np.sqrt(self.T)
+              * (self.T - t)) / (self.sigma * np.sqrt(self.T - t))
+        d2 = d1 - self.sigma * np.sqrt(self.T - t)
 
         call = (self.S0 * st.norm.cdf(d1, 0.0, 1.0) - self.K *
                 np.exp(-self.r * self.T) * st.norm.cdf(d2, 0.0, 1.0))
 
         return call
 
-    def put_price(self):
+    def put_price(self, t=0):
         """
         """
         d1 = (np.log(self.S0 / self.K) + (self.r + 0.5 * self.sigma ** 2)
-              * self.T) / (self.sigma * np.sqrt(self.T))
-        d2 = d1 - self.sigma * np.sqrt(self.T)
+              * (self.T - t)) / (self.sigma * np.sqrt(self.T - t))
+        d2 = d1 - self.sigma * np.sqrt(self.T - t)
 
         put = ((self.K * np.exp(-self.r * self.T)
                 * st.norm.cdf(-d2, 0.0, 1.0)) - self.S0 *
@@ -210,44 +220,45 @@ class BlackScholes:
             self.price += dS
 
     def create_hedge(self, steps=1, hedge_setting='Call'):
+        # time steps
         x_hedge = [j / steps for j in range(steps)]
 
+        # Check if price path is made
+        if self.price_path[-1] == 0:
+            self.create_price_path()
+
+        # corrected current price for hedge time intervals and all deltas for a given time
         hedge_price = [j for n, j in enumerate(self.price_path) if int(n % (self.steps / steps)) == 0]
         delta_list = [self.hedge(t, s, hedge_setting) for t, s in zip(x_hedge, hedge_price)]
 
-        prev, profit, price = 0, 0, 0
-        interest =  self.r * (self.T/steps)
+        # New time step and interest for given interval
+        dt = self.T / steps
+        interest = self.r * dt
 
-        for delta, price in zip(delta_list, hedge_price):
-            profit += prev * price  # verkoop huidige portfolie
-            profit -= delta * price  # Koop nieuwe porfolio
-            profit -= (delta * price) * interest  # Betalen geleende geld
-            prev = delta
+        # set iterables
+        delta_t = 0
+        current_stock_price = 0
 
-        if hedge_setting.lower() == 'call':
-            profit += (delta) * price # koop resterende deel
-            # delta = 1
-            profit -= self.K # verkoop plicht
-            profit -= self.call_price()
+        # set loop variables
+        previous_delta = delta_t
+        bank = self.call_price()
 
-        elif hedge_setting.lower() == 'put':
-            profit += (1 + delta) * price
-            profit -= self.K
-            profit -= self.put_price()
-        else:
-            print(hedge_setting, 'Not an expected value')
-            return None
+        # loop over the time step and hedge for every time step
+        for delta_t, current_stock_price in zip(delta_list, hedge_price):
+            cost = (delta_t - previous_delta) * current_stock_price
+            bank = bank * math.exp(interest) - cost
+            previous_delta = delta_t
 
-        # For testing
-        # print('price', price)
-        # print('profit', profit)
-        # print('call_price', self.call_price())
+        # Calculate the profit when t = T
+        profit = bank + (current_stock_price * delta_t) - max([current_stock_price - self.K, 0])
 
+        # Save values
         self.delta_list = delta_list
         self.x_hedge = x_hedge
+        self.hedge_price = hedge_price
 
         return profit
-
+    
     def plot_price_path(self, hedge_plot=True):
         fig, ax1 = plt.subplots()
         x_price = [i / self.steps for i in range(self.steps)]
@@ -279,7 +290,7 @@ class BlackScholes:
             return st.norm.cdf(d1, 0.0, 1.0)
 
         elif hedge_setting == 'put':
-            return -st.norm.cdf(-d1, 0.0, 1.0)
+            return -st.norm.cdf(d1, 0.0, 1.0)
         else:
             print("Setting not found")
             return None
