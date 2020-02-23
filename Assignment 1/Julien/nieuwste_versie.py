@@ -102,7 +102,7 @@ class BinTreeOption:
                                      self.option[j + 1, i + 1]) /
                                     (self.price_tree[j, i + 1] -
                                      self.price_tree[j + 1, i + 1]))
-                d1 = (np.log(self.S0 / self.K) + (self.r + 0.5 * self.sigma ** 2) * (self.T - t)) / (self.sigma * np.sqrt(self.T - t))
+                d1 = (np.log(self.price_tree[j, i] / self.K) + (self.r + 0.5 * self.sigma ** 2) * (self.T - t)) / (self.sigma * np.sqrt(self.T - t))
                 self.t_delta[j, i] = st.norm.cdf(d1, 0.0, 1.0)
                 
     def recursive_eu_put(self):
@@ -119,7 +119,7 @@ class BinTreeOption:
                                     (self.price_tree[j, i + 1] -
                                      self.price_tree[j + 1, i + 1]))
                 
-                d1 = (np.log(self.S0 / self.K) + (self.r + 0.5 * self.sigma ** 2) * (self.T - t)) / (self.sigma * np.sqrt(self.T - t))
+                d1 = (np.log(self.price_tree[j, i] / self.K) + (self.r + 0.5 * self.sigma ** 2) * (self.T - t)) / (self.sigma * np.sqrt(self.T - t))
                 self.t_delta[j, i] = -st.norm.cdf(-d1, 0.0, 1.0)
 
     def recursive_usa_call(self):
@@ -216,37 +216,39 @@ class BlackScholes:
         delta_list = [self.hedge(t, s, hedge_setting) for t, s in zip(x_hedge, hedge_price)]
 
         prev, profit, price = 0, 0, 0
-        interest =  self.r * (self.T/steps)
+        interest =  np.exp(self.r * (self.T/steps))
 
-        for delta, price in zip(delta_list, hedge_price):
-            profit += prev * price  # verkoop huidige portfolie
-            profit -= delta * price  # Koop nieuwe porfolio
-            profit -= (delta * price) * interest  # Betalen geleende geld
-            prev = delta
+        if hedge_setting.lower() == "call":
+            
+        # for delta, price in zip(delta_list, hedge_price):
+        #     profit += prev * price  # verkoop huidige portfolie
+        #     profit -= delta * price  # Koop nieuwe porfolio
+        #     profit -= (delta * price) * interest  # Betalen geleende geld
+        #     prev = delta
 
-        if hedge_setting.lower() == 'call':
-            profit += (delta) * price # koop resterende deel
-            # delta = 1
-            profit -= self.K # verkoop plicht
-            profit -= self.call_price()
+        # if hedge_setting.lower() == 'call':
+        #     profit += (delta) * price # koop resterende deel
+        #     # delta = 1
+        #     profit -= self.K # verkoop plicht
+        #     profit -= self.call_price()
 
-        elif hedge_setting.lower() == 'put':
-            profit += (1 + delta) * price
-            profit -= self.K
-            profit -= self.put_price()
-        else:
-            print(hedge_setting, 'Not an expected value')
-            return None
+        # elif hedge_setting.lower() == 'put':
+        #     profit += (1 + delta) * price
+        #     profit -= self.K
+        #     profit -= self.put_price()
+        # else:
+        #     print(hedge_setting, 'Not an expected value')
+        #     return None
 
-        # For testing
-        # print('price', price)
-        # print('profit', profit)
-        # print('call_price', self.call_price())
+        # # For testing
+        # # print('price', price)
+        # # print('profit', profit)
+        # # print('call_price', self.call_price())
 
-        self.delta_list = delta_list
-        self.x_hedge = x_hedge
+        # self.delta_list = delta_list
+        # self.x_hedge = x_hedge
 
-        return profit
+        # return profit
 
     def plot_price_path(self, hedge_plot=True):
         fig, ax1 = plt.subplots()
