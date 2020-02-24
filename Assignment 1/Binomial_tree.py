@@ -7,12 +7,13 @@ This code was implemented by
 Louis Weyland, Floris Fok and Julien Fer
 """
 
+# Import built-in libs
+import math
 
-
+# Import 3th parties libraries
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.stats as st
-import math
 
 class BinTreeOption:
     def __init__(
@@ -20,6 +21,20 @@ class BinTreeOption:
         market="EU", option_type="call", array_out=False
     ):
         """
+        OOP representation of a binomial option tree.
+        Input:
+            N = total time steps (integer)
+            T =  maturity option in years (numeric)
+            S0 = initial stock price (numeric)
+            r = risk-free rate (numeric)
+            K = strike price option (numeric)
+            market = market type (EU or USA)
+            option_type = determines option type (call or put)
+            array_out = False gives only resulting values, True gives full trees
+        Output:
+            returns an object representation with an already created price 
+            tree. It also contains methods to determine option price 
+            development and the hedging strategy
         """
 
         # Init
@@ -32,9 +47,12 @@ class BinTreeOption:
         self.market = market.upper()
         self.option_type = option_type.lower()
         self.array_out = array_out
+
+        # Checks if market type and option type are valid
         assert self.market in ["EU", "USA"], "Market not found. Choose EU or USA"
         assert self.option_type in ["call", "put"], "Non-existing option type."
 
+        # Setup parameters for movements binomial tree
         self.dt = T / N
         self.u = np.exp(sigma * np.sqrt(self.dt))
         self.d = 1 / self.u
@@ -52,6 +70,7 @@ class BinTreeOption:
 
     def create_price_tree(self):
         """
+        Determines stock price at every time step.
         """
         for i in range(self.N + 1):
             for j in range(i + 1):
@@ -60,32 +79,43 @@ class BinTreeOption:
 
     def determine_price(self):
         """
+        Determines option price and hedging strategy at every time step 
+        depending on the option type and market.
         """
 
-        # Calculate vall option price at t=0 (European)
+        # Sets option price at maturity and apply recursive scheme 
+        # for European call option
         if self.market == "EU" and self.option_type == "call":
             self.option[:, self.N] = np.maximum(
                 np.zeros(self.N + 1), self.price_tree[:, self.N] - self.K
             )
             self.recursive_eu_call()
 
+        # Sets option price at maturity and apply recursive scheme
+        # for European put option
         elif self.market == "EU" and self.option_type == "put":
             self.option[:, self.N] = np.maximum(
                 np.zeros(self.N + 1), self.K - self.price_tree[:, self.N]
             )
             self.recursive_eu_put()
 
+        # Sets option price at maturity and apply recursive scheme
+        # for American call option
         elif self.market == "USA" and self.option_type == "call":
             self.option[:, self.N] = np.maximum(
                 np.zeros(self.N + 1), self.price_tree[:, self.N] - self.K
             )
             self.recursive_usa_call()
 
+        # Sets option price at maturity and apply recursive scheme
+        # for American put option
         elif self.market == "USA" and self.option_type == "put":
             self.option[:, self.N] = np.maximum(
                 np.zeros(self.N + 1), self.K - self.price_tree[:, self.N])
             self.recursive_usa_put()
 
+        # Ensures full output is given if asked by user. 
+        # Otherwise it only returns the variables of interest at the spot time.
         if self.array_out and self.market == "EU":
             return [self.option[0, 0], self.delta[0, 0], self.t_delta[0, 0],
                     self.price_tree, self.option, self.delta, self.t_delta]
@@ -99,10 +129,18 @@ class BinTreeOption:
 
     def recursive_eu_call(self):
         """
+        Recursive scheme for an Europen call option.
         """
+
+        # Time starts at maturity (only necessary for theoretical hedging)
         t = self.T
+
+        # Start scheme
         for i in np.arange(self.N - 1, -1, -1):
             t -= self.dt
+
+            # Determines option price, hedging strategy and theoretical hedging 
+            # strartegy for each node in current layer
             for j in np.arange(0, i + 1):
                 self.option[j, i] = (self.discount * (self.p *
                                                       self.option[j, i + 1] + (1 - self.p) *
@@ -116,9 +154,19 @@ class BinTreeOption:
                 self.t_delta[j, i] = st.norm.cdf(d1, 0.0, 1.0)
                 
     def recursive_eu_put(self):
+        """
+        Recursive scheme for an Europen put option.
+        """
+
+        # Time starts at maturity (only necessary for theoretical hedging)
         t = self.T
+        
+        # Start scheme
         for i in np.arange(self.N - 1, -1, -1):
             t -= self.dt
+
+            # Determines option price, hedging strategy and theoretical hedging
+            # strartegy for each node in current layer
             for j in np.arange(0, i + 1):
                 self.option[j, i] = (self.discount * (self.p *
                                                       self.option[j, i + 1] + (1 - self.p) *
@@ -134,8 +182,14 @@ class BinTreeOption:
 
     def recursive_usa_call(self):
         """
+        Recursive scheme for an American call option
         """
+
+        # Start scheme
         for i in np.arange(self.N - 1, -1, -1):
+
+            # Determines option price and hedging strategy
+            # for each node in current layer
             for j in np.arange(0, i + 1):
                 self.option[j, i] = max([0, self.price_tree[j, i] - self.K,
                                          self.discount *
@@ -149,8 +203,14 @@ class BinTreeOption:
 
     def recursive_usa_put(self):
         """
+        Recursive scheme for an American put option
         """
+
+        # Start scheme
         for i in np.arange(self.N - 1, -1, -1):
+
+            # Determines option price and hedging strategy
+            # for each node in current layer
             for j in np.arange(0, i + 1):
                 self.option[j, i] = max([0, self.K - self.price_tree[j, i],
                                          self.discount *
@@ -161,12 +221,6 @@ class BinTreeOption:
                                     (self.price_tree[j, i + 1] -
                                      self.price_tree[j + 1, i + 1]))
                                      
-
-    def reset_tree(self):
-        """
-        """
-        self.price_tree = np.zeros((N + 1, N + 1))
-        self.option = np.zeros((N + 1, N + 1))
 
 
 class BlackScholes:
