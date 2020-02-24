@@ -7,19 +7,20 @@ This code was implemented by
 Louis Weyland, Floris Fok and Julien Fer
 """
 
+# Import built-in libraries
+import time
+import math
+import statistics
+import multiprocessing
 
-
+# import 3th party libraries
 import numpy as np
 import matplotlib.pyplot as plt
-from collections import defaultdict
-from Binomial_tree import BinTreeOption, BlackScholes
-import time
-import multiprocessing
-import math
 import yfinance as yf
-import statistics
+from collections import defaultdict
 
-
+# Import onw modules
+from Binomial_tree import BinTreeOption, BlackScholes
 
 def binomial_tree_1(N, T, S, K, r,market,option_type,save_plot=False):
     '''
@@ -42,12 +43,13 @@ def binomial_tree_1(N, T, S, K, r,market,option_type,save_plot=False):
      ]
     bs = [BlackScholes(T, S, K, r, s) for s in sigmas]
 
+    # Determine call prices 
     call_prices = defaultdict(list)
     for tree, bs in zip(trees, bs):
      call_prices["Binomial tree"].append(tree.determine_price())
      call_prices["Black Scholes"].append(bs.call_price())
 
-    # # Make plot
+    # Make plot
     plt.figure()
     plt.plot(sigmas, [i[0] for i in call_prices["Binomial tree"]], label="Binomial tree")
     plt.plot(sigmas, call_prices["Black Scholes"], label="Black Scholes")
@@ -81,8 +83,7 @@ def binomial_tree_2( T, S, K, r, sigma, market, option_type,save_plot=False,run_
     :return:   price of option & delta
     '''
 
-    # # Analyse time steps
-
+    # Analyse time steps
     steps = list(range(20, 500,5))
 
     trees = [
@@ -106,7 +107,7 @@ def binomial_tree_2( T, S, K, r, sigma, market, option_type,save_plot=False,run_
     print("Black Scholes option price =",bs_price)
     prices_bs = [bs_price] * len(steps)
 
-    # # Make plot
+    # Make plot
     plt.figure()
     plt.plot(steps, [i[0] for i in prices_trees], label="Binomial tree")
     plt.plot(steps, prices_bs, label="Black Scholes")
