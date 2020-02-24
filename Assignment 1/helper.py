@@ -298,7 +298,7 @@ def real_stock_data():
 
     B = BlackScholes(years, data[0], data[0] - 1, rate, sigma, steps)
     B.price_path = data
-    print('profit of Apple stocks:', B.create_hedge(52))
+    print('profit of Apple stocks:', B.create_hedge(52,hedge_setting='call'))
 
     B.x_hedge = [i * 7 for i in range(0, 52)]
     plot_price_path(B, 'Apple stocks simulation')
