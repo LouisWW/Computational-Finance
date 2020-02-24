@@ -274,6 +274,9 @@ class BlackScholes:
             self.price += dS
 
     def create_hedge(self, steps=1, hedge_setting='Call'):
+        '''
+        Simulate hedging over the given price path and returns a profit
+        '''
         # time steps
         x_hedge = [j / steps for j in range(steps)]
 
@@ -306,17 +309,24 @@ class BlackScholes:
         # Calculate the profit when t = T
         profit = bank + (current_stock_price * delta_t) - max([current_stock_price - self.K, 0])
 
-        # Save values
+        # Save values for later evaluations
         self.delta_list = delta_list
         self.x_hedge = x_hedge
         self.hedge_price = hedge_price
-
+        
+        # return profit made during the hedging
         return profit
     
     def plot_price_path(self, hedge_plot=True):
+        '''
+        Eneables to plot both price path and delta over time
+        '''
         fig, ax1 = plt.subplots()
+        
+        # Get price time steps
         x_price = [i / self.steps for i in range(self.steps)]
-
+        
+        # Plot the price over time on the first axis
         color = 'tab:red'
         ax1.set_xlabel('years')
         ax1.set_ylabel('Price', color=color)
@@ -325,25 +335,33 @@ class BlackScholes:
         ax1.tick_params(axis='y', labelcolor=color)
 
         if hedge_plot:
-            ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+            # Instantiate a second axes that shares the same x-axis
+            ax2 = ax1.twinx()
             color = 'tab:blue'
             # we already handled the x-label with ax1
             ax2.set_ylabel('Delta', color=color)
+            # Plot the delta
             ax2.plot(self.x_hedge, self.delta_list, color=color, label='Hedge delta')
             ax2.tick_params(axis='y', labelcolor=color)
-
+           
+        # Finalize the plot and show
         plt.title("Stock price and Delta development over time")
-        fig.tight_layout()  # otherwise the right y-label is slightly clipped
-        # plt.show()
+        fig.tight_layout()
+        plt.show()
 
     def hedge(self, t, S, hedge_setting='call'):
-        hedge_setting = hedge_setting.lower()
+        '''
+        Calculate the delta at a given time
+        '''
+        # Take d1 from black-scholes
         d1 = (np.log(S / self.K) + (self.r + 0.5 * self.sigma ** 2)
               * (self.T - t)) / (self.sigma * np.sqrt(self.T - t))
-        if hedge_setting == 'call':
+        
+        # Calculate derivitive for call and put
+        if hedge_setting.lower() == 'call':
             return st.norm.cdf(d1, 0.0, 1.0)
 
-        elif hedge_setting == 'put':
+        elif hedge_setting.lower() == 'put':
             return -st.norm.cdf(d1, 0.0, 1.0)
         else:
             print("Setting not found")
