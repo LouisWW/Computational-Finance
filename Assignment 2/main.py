@@ -23,8 +23,9 @@ Basic Option Valuation :
 #helper.monte_carlo_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
 
 #helper.test(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
-helper.milestein_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
+#helper.milstein_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
 
+helper.antithetic_monte_carlo_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
 
 '''
 Estimation of Sensitivities in MC:

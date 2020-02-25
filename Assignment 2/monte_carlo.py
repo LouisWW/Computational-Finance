@@ -26,40 +26,59 @@ class monte_carlo:
         assert self.market in ["EU", "USA"], "Market not found. Choose EU or USA"
         assert self.option_type in ["call", "put"], "Non-existing option type."
 
-    def wiener_method(self):
-            """
-            """
-            price= self.price
-            price_path = np.zeros(self.steps)
-            for i in range(self.steps):
-                price_path[i] = price
-                ds = self.r * price * self.dt + self.sigma * \
-                     price * np.random.normal(0, 1) * np.sqrt(self.dt)
-                price += ds
-            return price_path
-
-    def euler_integration(self):
-
-       self.euler_integration = self.S0 * np.exp((self.r - 0.5 * self.sigma ** 2) * self.T + self.sigma *
-                                                 np.sqrt(self.T)*np.random.normal(0, 1))
-
-
-    def milestein_method(self):
+    def wiener_method(self, antithetic=False):
         """
         """
         price = self.price
-        price_path = np.zeros(self.steps)
+        self.wiener_price_path = np.zeros(self.steps)
         for i in range(self.steps):
-            price_path[i] = price
+            self.wiener_price_path[i] = price
+            ds = self.r * price * self.dt + self.sigma * \
+                price * np.random.normal(0, 1) * np.sqrt(self.dt)
+            price += ds
+
+    def euler_integration(self):
+        self.euler_integration = self.S0 * np.exp((self.r - 0.5 * self.sigma ** 2) * self.T + self.sigma *
+                                                 np.sqrt(self.T)*np.random.normal(0, 1))
+
+    def milstein_method(self):
+        """
+        """
+        price = self.price
+        self.milstein_price_path = np.zeros(self.steps)
+        for i in range(self.steps):
+            self.milstein_price_path[i] = price
             ds = (1 + (self.r-.5*self.sigma**2)*self.dt + self.sigma*np.random.normal(0, 1)*np.sqrt(self.T) +
                   0.5*self.sigma**2*np.random.normal(0, 1)**2*self.dt)
             price = price * ds
 
-        return price_path
 
 
+    def antithetic_wiener_method(self):
+        """
+        """
+        n_paths=1000
+        paths_list=[]
+        price = self.price
+        anti_price= self.price
+        for k in range(int(n_paths/2)):
+            wiener_price_path = np.zeros(self.steps)
+            anti_wiener_price_path = np.zeros(self.steps)
 
+            for i in range(self.steps):
+                epsilon=np.random.normal(0, 1)
+                wiener_price_path[i] = price
+                anti_wiener_price_path[i] = anti_price
+                ds = self.r * price * self.dt + self.sigma * price * epsilon * np.sqrt(self.dt)
+                anti_ds = self.r * anti_price * self.dt + self.sigma * price * -epsilon * np.sqrt(self.dt)
 
+                price += ds
+                anti_price += anti_ds
+
+            paths_list.append(wiener_price_path)
+            paths_list.append(anti_wiener_price_path)
+
+        return paths_list
 
 
 

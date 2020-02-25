@@ -28,12 +28,12 @@ def plot_wiener_process(T, S0, K, r, sigma, steps,save_plot=False):
 
     mc=monte_carlo(steps, T, S0, sigma, r, K)
 
-    price_path = mc.wiener_method()
+    mc.wiener_method()
 
 
     plt.figure()
     np.linspace(1,mc.T*365,mc.steps)#to ensure the x-axis is in respective to the total time T
-    plt.plot(np.linspace(1,mc.T*365,mc.steps),price_path)
+    plt.plot(np.linspace(1,mc.T*365,mc.steps),mc.wiener_price_path)
     plt.xlabel("Days",fontsize=12,fontweight='bold')
     plt.ylabel("Stock price",fontsize=12,fontweight='bold')
     plt.xticks(fontweight='bold')
@@ -69,7 +69,7 @@ def monte_carlo_process(T, S0, K, r, sigma, steps,save_plot=False):
 
         for j in range(sub_rep):
             mc_list[j].wiener_method()
-            pay_off_array[j] = np.max([(mc_list[j].price_path[-1]-mc_list[j].K),0])
+            pay_off_array[j] = np.max([(mc_list[j].wiener_price_path[-1]-mc_list[j].K),0])
 
 
         mean_pay_off_array[i] = np.mean(pay_off_array)
@@ -92,7 +92,7 @@ def monte_carlo_process(T, S0, K, r, sigma, steps,save_plot=False):
 
 
 
-def milestein_process(T, S0, K, r, sigma, steps,save_plot=False):
+def milstein_process(T, S0, K, r, sigma, steps,save_plot=False):
         """
          :param T:  Period
          :param S0: Stock price at spot time
@@ -106,11 +106,11 @@ def milestein_process(T, S0, K, r, sigma, steps,save_plot=False):
 
         mc = monte_carlo(steps, T, S0, sigma, r, K)
 
-        price_path=mc.milestein_method()
+        price_path=mc.milstein_method()
 
         plt.figure()
         np.linspace(1, mc.T * 365, mc.steps)  # to ensure the x-axis is in respective to the total time T
-        plt.plot(np.linspace(1, mc.T * 365, mc.steps), price_path)
+        plt.plot(np.linspace(1, mc.T * 365, mc.steps), mc.milstein_price_path)
         plt.xlabel("Days", fontsize=12, fontweight='bold')
         plt.ylabel("Stock price", fontsize=12, fontweight='bold')
         plt.xticks(fontweight='bold')
@@ -120,6 +120,25 @@ def milestein_process(T, S0, K, r, sigma, steps,save_plot=False):
             plt.savefig("figures/" + "milestein method", dpi=300)
         plt.show()
         plt.close()
+
+
+
+def antithetic_monte_carlo_process(T, S0, K, r, sigma, steps,save_plot=False):
+
+    mc = monte_carlo(steps, T, S0, sigma, r, K)
+
+    path_list=mc.antithetic_wiener_method()
+
+    plt.figure()
+    plt.plot(path_list[0])
+    plt.plot(path_list[1])
+    plt.xlabel("Days", fontsize=12, fontweight='bold')
+    plt.ylabel("Stock price", fontsize=12, fontweight='bold')
+    plt.title("Antithetic Monte Carlo", fontsize=14, fontweight='bold')
+    plt.xticks(fontweight='bold')
+    plt.yticks(fontweight='bold')
+    plt.show()
+    plt.close()
 
 
 ########################################################################################################################
