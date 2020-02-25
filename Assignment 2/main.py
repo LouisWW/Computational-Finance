@@ -19,10 +19,11 @@ Basic Option Valuation :
 - estimate the Standard error and accuracy
 '''
 
-#helper.wiener_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
-helper.euler_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
+#helper.plot_wiener_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
+#helper.monte_carlo_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
 
-
+#helper.test(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
+helper.milestein_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
 
 
 '''

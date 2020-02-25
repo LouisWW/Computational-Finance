@@ -51,7 +51,7 @@ def binomial_tree_1(N, T, S, K, r,market,option_type,save_plot=False):
 
     # Make plot
     plt.figure()
-    plt.plot(sigmas, [i[0] for i in call_prices["Binomial tree"]], label="Binomial tree")
+    plt.plot(sigmas, [i[0] for i in call_prices["Binomial tree"]], '--',linewidth=3,label="Binomial tree")
     plt.plot(sigmas, call_prices["Black Scholes"], label="Black Scholes")
     plt.xlabel("Volatility (%) ",fontsize=12,fontweight='bold')
     plt.ylabel("Price",fontsize=12,fontweight='bold')
@@ -177,7 +177,7 @@ def binomial_tree_3(N,T, S, K, r, market, option_type,save_plot=True):
 
     #  Make plot
     plt.figure()
-    plt.plot(sigmas, [i[1] for i in call_prices["Binomial tree"]], label="Binomial tree")
+    plt.plot(sigmas, [i[1] for i in call_prices["Binomial tree"]],'--',linewidth=3, label="Binomial tree")
     plt.plot(sigmas, [i[2] for i in call_prices["Binomial tree"]], label="Black Scholes")
     plt.xlabel("Volatility (%) ",fontsize=12,fontweight='bold')
     plt.ylabel(r"$\Delta$ (%)",fontsize=12,fontweight='bold')

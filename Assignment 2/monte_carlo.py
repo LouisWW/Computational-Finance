@@ -21,7 +21,6 @@ class monte_carlo:
         self.K = K
         self.dt = T / steps
         self.price = S0
-        self.price_path = np.zeros(steps)
         self.market = market.upper()
         self.option_type = option_type.lower()
         assert self.market in ["EU", "USA"], "Market not found. Choose EU or USA"
@@ -30,29 +29,34 @@ class monte_carlo:
     def wiener_method(self):
             """
             """
+            price= self.price
+            price_path = np.zeros(self.steps)
             for i in range(self.steps):
-                self.price_path[i] = self.price
-                dS = self.r * self.price * self.dt + self.sigma * \
-                     self.price * np.random.normal(0, 1) * np.sqrt(self.dt)
-
-                self.price += dS
-
-    def euler_method(self):
-
-        self.S = self.price
-
-        for i in range(self.steps):
-
-            self.price_path[i] = self.S
-            dS = self.S*(self.r*self.dt+self.sigma*np.random.normal(0, 1) * np.sqrt(self.dt))
-
-            self.S += dS
-
+                price_path[i] = price
+                ds = self.r * price * self.dt + self.sigma * \
+                     price * np.random.normal(0, 1) * np.sqrt(self.dt)
+                price += ds
+            return price_path
 
     def euler_integration(self):
 
        self.euler_integration = self.S0 * np.exp((self.r - 0.5 * self.sigma ** 2) * self.T + self.sigma *
-                                                 np.sqrt(self.T)*np.random.normal(0, 1) * np.sqrt(self.dt))
+                                                 np.sqrt(self.T)*np.random.normal(0, 1))
+
+
+    def milestein_method(self):
+        """
+        """
+        price = self.price
+        price_path = np.zeros(self.steps)
+        for i in range(self.steps):
+            price_path[i] = price
+            ds = (1 + (self.r-.5*self.sigma**2)*self.dt + self.sigma*np.random.normal(0, 1)*np.sqrt(self.T) +
+                  0.5*self.sigma**2*np.random.normal(0, 1)**2*self.dt)
+            price = price * ds
+
+        return price_path
+
 
 
 

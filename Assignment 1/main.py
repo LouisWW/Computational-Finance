@@ -25,10 +25,10 @@ exercise 1.2 : Determining the effect of the step used for the binomial tree on 
 Warning : This function may take a certain time. To boost the performance define NUM_CORE
             
 '''
-# helper.binomial_tree_2(1, 100, 99, 0.06, 0.2,'EU',"call",save_plot=True,run_time=False)
-# helper.binomial_tree_2(1, 100, 99, 0.06, 0.2,'EU',"put",save_plot=True,run_time=False)
-# helper.binomial_tree_2(1, 100, 99, 0.06, 0.2,'USA',"call",save_plot=True,run_time=False)
-# helper.binomial_tree_2(1, 100, 99, 0.06, 0.2,'USA',"put",save_plot=True,run_time=False)
+#helper.binomial_tree_2(1, 100, 99, 0.06, 0.2,'EU',"call",save_plot=True,run_time=True)
+#helper.binomial_tree_2(1, 100, 99, 0.06, 0.2,'EU',"put",save_plot=True,run_time=True)
+#helper.binomial_tree_2(1, 100, 99, 0.06, 0.2,'USA',"call",save_plot=True,run_time=True)
+#helper.binomial_tree_2(1, 100, 99, 0.06, 0.2,'USA',"put",save_plot=True,run_time=True)
 
 
 '''
