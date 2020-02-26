@@ -7,9 +7,11 @@ This code was implemented by
 Louis Weyland, Floris Fok and Julien Fer
 """
 
+import math
 from monte_carlo import monte_carlo
 import matplotlib.pyplot as plt
 import numpy as np
+import tqdm
 from collections import defaultdict
 import multiprocessing
 from Binomial_tree import BinTreeOption, BlackScholes
@@ -71,7 +73,7 @@ def monte_carlo_process(T, S0, K, r, sigma, steps,save_plot=False):
 
         for j in range(repetition):
             mc_list[j].euler_integration()
-            mc_pay_off_array[j] = np.max([mc_list[j].K-(mc_list[j].euler_price_path[-1]), 0])
+            mc_pay_off_array[j] = np.max([(mc_list[j].K-mc_list[j].euler_price_path[-1]), 0])
 
         mc_mean_pay_off = np.mean(mc_pay_off_array)
         mc_pricing_list.append(np.exp(-r*T*mc_mean_pay_off))
@@ -97,33 +99,33 @@ def monte_carlo_process(T, S0, K, r, sigma, steps,save_plot=False):
 
 
 def milstein_process(T, S0, K, r, sigma, steps,save_plot=False):
-        """
-         :param T:  Period
-         :param S0: Stock price at spot time
-         :param K:  Strike price
-         :param r:  interest rate
-         :param sigma: volatility
-         :param steps: number of steps
-         :param save_plot:  to save the plot
-         :return:  returns a plot of a simulated stock movement
-         """
+    """
+    :param T:  Period
+    :param S0: Stock price at spot time
+    :param K:  Strike price
+    :param r:  interest rate
+    :param sigma: volatility
+    :param steps: number of steps
+    :param save_plot:  to save the plot
+    :return:  returns a plot of a simulated stock movement
+    """
 
-        mc = monte_carlo(steps, T, S0, sigma, r, K)
+    mc = monte_carlo(steps, T, S0, sigma, r, K)
 
-        price_path=mc.milstein_method()
+    price_path=mc.milstein_method()
 
-        plt.figure()
-        np.linspace(1, mc.T * 365, mc.steps)  # to ensure the x-axis is in respective to the total time T
-        plt.plot(np.linspace(1, mc.T * 365, mc.steps), mc.milstein_price_path)
-        plt.xlabel("Days", fontsize=12, fontweight='bold')
-        plt.ylabel("Stock price", fontsize=12, fontweight='bold')
-        plt.xticks(fontweight='bold')
-        plt.yticks(fontweight='bold')
-        plt.title("Milestein method", fontsize=14, fontweight='bold')
-        if save_plot:
-            plt.savefig("figures/" + "milestein method", dpi=300)
-        plt.show()
-        plt.close()
+    plt.figure()
+    np.linspace(1, mc.T * 365, mc.steps)  # to ensure the x-axis is in respective to the total time T
+    plt.plot(np.linspace(1, mc.T * 365, mc.steps), mc.milstein_price_path)
+    plt.xlabel("Days", fontsize=12, fontweight='bold')
+    plt.ylabel("Stock price", fontsize=12, fontweight='bold')
+    plt.xticks(fontweight='bold')
+    plt.yticks(fontweight='bold')
+    plt.title("Milestein method", fontsize=14, fontweight='bold')
+    if save_plot:
+        plt.savefig("figures/" + "milestein method", dpi=300)
+    plt.show()
+    plt.close()
 
 
 
@@ -147,9 +149,48 @@ def antithetic_monte_carlo_process(T, S0, K, r, sigma, steps,save_plot=False):
 def bump_and_revalue(T, S0, K, r, sigma, steps, epsilons, save_plot=False):
     """
     """
-    for eps in epsilons:
-        mc_revalue = monte_carlo(steps, T, S0, sigma, r, K)
-        mc_bumped = monte_carlo(steps, T, S0 + eps, r, K)
+    repetitions, diff_eps = 100, len(epsilons)
+    prices_revalue = np.zeros((repetitions, diff_eps))
+    prices_bump = np.zeros((repetitions, diff_eps))
+    deltas = np.zeros(diff_eps)
+    bs_deltas = np.zeros(diff_eps)
+
+    for i, eps in enumerate(epsilons):
+        mc_revalue_list = [monte_carlo(steps, T, S0, sigma, r, K)
+                           for _ in range(repetitions)]
+        mc_bump_list = [monte_carlo(steps, T, S0 + eps, sigma, r, K) 
+                        for _ in range(repetitions)]
+        # payoff_revalue = np.zeros(repetitions)
+        # payoff_bump = np.zeros(repetitions)
+
+        for j in range(repetitions):
+            mc_revalue_list[j].euler_integration()
+            payoff_revalue = max([mc_revalue_list[j].K - 
+                                    mc_revalue_list[j].euler_price_path[-1], 0])
+            prices_revalue[j, i] = math.exp(-r * T) * payoff_revalue
+            #print(payoff_revalue)
+
+            mc_bump_list[j].euler_integration()
+            payoff_bump = max([mc_bump_list[j].K - 
+                                mc_bump_list[j].euler_price_path[-1], 0])
+            prices_bump[j, i] = math.exp(-r * T) * payoff_bump
+            #print(payoff_bump)
+
+            #deltas[j, i] = (payoff_bump - payoff_revalue) / eps
+            #(deltas[j, :])
+            #break
+
+        #break
+        mean_price_revalue = prices_revalue[:, i].mean()
+        mean_price_bump = prices_bump[:, i].mean()
+        print(prices_revalue[:, i])
+        print(mean_price_revalue)
+        print(prices_bump[:, i])
+        print(mean_price_bump)
+        deltas[i] = (mean_price_bump - mean_price_revalue) / eps
+        break
+
+    return deltas
 
 ########################################################################################################################
 ########################################################################################################################

@@ -20,7 +20,7 @@ Basic Option Valuation :
 '''
 
 #helper.plot_wiener_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
-helper.monte_carlo_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
+#helper.monte_carlo_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
 
 #helper.test(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
 #helper.milstein_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
@@ -34,6 +34,11 @@ Estimation of Sensitivities in MC:
 - use different/same seed for bumped/unbumped estimate of the value
 - and point 2 use sophisticated method discussed in the lecture
 '''
+
+mean_deltas = helper.bump_and_revalue(
+    1, 100, 99, 0.06, 0.2, 365, [0.01, 0.02, 0.5], save_plot=False
+    )
+print(mean_deltas)
 
 
 '''
