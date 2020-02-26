@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from collections import defaultdict
 import multiprocessing
+from Binomial_tree import BinTreeOption, BlackScholes
+
 
 
 def plot_wiener_process(T, S0, K, r, sigma, steps,save_plot=False):
@@ -57,32 +59,34 @@ def monte_carlo_process(T, S0, K, r, sigma, steps,save_plot=False):
     :return:  returns a plot of a simulated stock movement
     """
 
-    rep = 100
-    sub_rep= 1000
-    mean_pay_off_array = np.zeros(rep)
-    for i in range(rep):
+    increments = 10
+    max_repetition = 100
+    different_mc_rep = np.linspace(10,max_repetition,increments,dtype=int)
+    mc_pricing_list = []
 
-        mc_list = [monte_carlo(steps, T, S0, sigma, r, K) for i in range(sub_rep)]
-        pay_off_array = np.zeros(sub_rep)
+    for i in different_mc_rep:
+        repetition = i
+        mc_list = [monte_carlo(steps, T, S0, sigma, r, K) for i in range(repetition)]
+        mc_pay_off_array = np.zeros(repetition)
 
+        for j in range(repetition):
+            mc_list[j].euler_integration()
+            mc_pay_off_array[j] = np.max([mc_list[j].K-(mc_list[j].euler_price_path[-1]), 0])
 
+        mc_mean_pay_off = np.mean(mc_pay_off_array)
+        mc_pricing_list.append(np.exp(-r*T*mc_mean_pay_off))
 
-        for j in range(sub_rep):
-            mc_list[j].wiener_method()
-            pay_off_array[j] = np.max([(mc_list[j].wiener_price_path[-1]-mc_list[j].K),0])
+    bs = BlackScholes(T, S0, K, r, sigma)
 
-
-        mean_pay_off_array[i] = np.mean(pay_off_array)
-
-    std_dev=np.std(mean_pay_off_array)
-
-    print("The standard deviation is ", std_dev)
+    bs_array = np.ones(max_repetition)*bs.put_price()
 
     plt.figure()
-    plt.hist(mean_pay_off_array,color='gray')
+    plt.plot(different_mc_rep,mc_pricing_list,color='gray',label='Monte Carlo')
+    plt.plot(bs_array,'r',label='Black Scholes')
+    plt.legend()
     plt.plot()
-    plt.xlabel(r"Stock price S_T",fontsize=12,fontweight='bold')
-    plt.ylabel("Occurence (#)",fontsize=12,fontweight='bold')
+    plt.xlabel(r"MC repetition",fontsize=12,fontweight='bold')
+    plt.ylabel("Option Price",fontsize=12,fontweight='bold')
     plt.xticks(fontweight='bold')
     plt.yticks(fontweight='bold')
     if save_plot:

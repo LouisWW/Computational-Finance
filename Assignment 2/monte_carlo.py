@@ -26,7 +26,7 @@ class monte_carlo:
         assert self.market in ["EU", "USA"], "Market not found. Choose EU or USA"
         assert self.option_type in ["call", "put"], "Non-existing option type."
 
-    def wiener_method(self, antithetic=False):
+    def wiener_method(self):
         """
         """
         price = self.price
@@ -38,8 +38,20 @@ class monte_carlo:
             price += ds
 
     def euler_integration(self):
-        self.euler_integration = self.S0 * np.exp((self.r - 0.5 * self.sigma ** 2) * self.T + self.sigma *
-                                                 np.sqrt(self.T)*np.random.normal(0, 1))
+        #self.euler_integration = self.S0 * np.exp((self.r - 0.5 * self.sigma**2) * self.T + self.sigma *
+
+                                                 #np.sqrt(self.T)*np.random.normal(0, 1))
+
+        price = self.price
+        self.euler_price_path = np.zeros(self.steps)
+        for i in range(self.steps):
+            self.euler_price_path[i] = price
+            ds = price * math.exp((self.r-0.5*self.sigma**2)*self.dt+
+                                self.sigma*np.random.normal(0, 1) * math.sqrt(self.dt))
+            price = ds
+
+
+
 
     def milstein_method(self):
         """
