@@ -140,6 +140,12 @@ def antithetic_monte_carlo_process(T, S0, K, r, sigma, steps,save_plot=False):
     plt.show()
     plt.close()
 
+def bump_and_revalue(T, S0, K, r, sigma, steps, epsilons, save_plot=False):
+    """
+    """
+    for eps in epsilons:
+        mc_revalue = monte_carlo(steps, T, S0, sigma, r, K)
+        mc_bumped = monte_carlo(steps, T, S0 + eps, r, K)
 
 ########################################################################################################################
 ########################################################################################################################
