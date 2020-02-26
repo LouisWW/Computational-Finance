@@ -22,7 +22,7 @@ Basic Option Valuation :
 #helper.plot_wiener_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
 #helper.monte_carlo_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
 #helper.diff_monte_carlo_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=True)
-helper.diff_K_monte_carlo_process(1, 100,99, 0.06, 0.2, steps=365,save_plot=True)
+#helper.diff_K_monte_carlo_process(1, 100,99, 0.06, 0.2, steps=365,save_plot=True)
 
 #helper.test(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
 #helper.milstein_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
@@ -38,9 +38,28 @@ Estimation of Sensitivities in MC:
 '''
 
 mean_deltas = helper.bump_and_revalue(
-    1, 100, 99, 0.06, 0.2, 365, [0.01, 0.02, 0.5], save_plot=False
+    1, 100, 99, 0.06, 0.2, 365, [0.01, 0.02, 0.5], reps=100, full_output=True, save_plot=False, show_plots=False
     )
-print(mean_deltas)
+prices_revalue, prices_bump, deltas, bs_deltas = mean_deltas
+print(deltas)
+print("======================================================================")
+print(bs_deltas)
+# print("=====================================================================")
+# print("PRICES REVALUE")
+# print(prices_revalue)
+# print("=====================================================================")
+# print("=====================================================================")
+# print("PRICES BUMPS")
+# print(prices_bump)
+# print("=====================================================================")
+# print("=====================================================================")
+# print("DELTAS BUMPS")
+# print(deltas)
+# print("=====================================================================")
+# print("=====================================================================")
+# print("THEORETICAL DELTAS")
+# print(bs_deltas)
+# print("=====================================================================")
 
 
 '''
