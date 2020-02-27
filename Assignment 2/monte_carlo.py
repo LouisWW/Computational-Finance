@@ -51,7 +51,7 @@ class monte_carlo:
                                     self.sigma*np.random.normal(0, 1) * math.sqrt(self.dt))
                 price = ds
 
-                return self.euler_integration,self.euler_price_path
+            return self.euler_integration,self.euler_price_path
 
         return self.euler_integration
 
