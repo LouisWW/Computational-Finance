@@ -282,12 +282,12 @@ def bump_and_revalue(
             mc_bump = monte_carlo(steps, T, S_eps, sigma, r, K)
 
             # Euler integration MC rev, save discounted payoff at maturity
-            mc_revalue.euler_integration()
+            mc_revalue.euler_integration_method()
             payoff_revalue = max([mc_revalue.K - mc_revalue.euler_integration, 0])
             prices_revalue[j, i] = math.exp(-r * T) * payoff_revalue
 
             # Euler integration MC bump, save discounted payoff at maturity
-            mc_bump.euler_integration()
+            mc_bump.euler_integration_method()
             payoff_bump = max([mc_bump.K - mc_bump.euler_integration, 0])
             prices_bump[j, i] = math.exp(-r * T) * payoff_bump
  
