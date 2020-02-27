@@ -20,9 +20,12 @@ Basic Option Valuation :
 '''
 
 #helper.plot_wiener_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
+
 #helper.monte_carlo_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
+
 #helper.diff_monte_carlo_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=True)
 helper.diff_K_monte_carlo_process(1, 100,99, 0.06, 0.2, steps=365,save_plot=True)
+
 
 #helper.test(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
 #helper.milstein_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)

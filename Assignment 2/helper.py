@@ -17,6 +17,8 @@ from collections import defaultdict
 import multiprocessing
 from Binomial_tree import BinTreeOption, BlackScholes
 import tqdm
+import pickle
+from matplotlib import rc
 
 
 
@@ -51,6 +53,16 @@ def plot_wiener_process(T, S0, K, r, sigma, steps,save_plot=False):
     plt.close()
 
 
+def worker_pay_off_euler(object):
+    np.random.seed()
+    object.euler_integration_method()
+    pay_off_array_sim = np.max([(object.K - object.euler_price_path[-1]), 0])
+    pay_off_array_direct = np.max([(object.K - object.euler_integration), 0])
+
+    return pay_off_array_sim,pay_off_array_direct
+
+
+
 def diff_monte_carlo_process(T, S0, K, r, sigma, steps,save_plot=False):
     """
     :param T:  Period
@@ -77,6 +89,8 @@ def diff_monte_carlo_process(T, S0, K, r, sigma, steps,save_plot=False):
 
         pay_off_array_sim=np.zeros(rep)
         pay_off_array_direct = np.zeros(rep)
+
+        mc_list=[mc]
         for j in range(rep):
             mc = monte_carlo(steps, T, S0, sigma, r, K)
             mc.euler_integration()
@@ -92,6 +106,12 @@ def diff_monte_carlo_process(T, S0, K, r, sigma, steps,save_plot=False):
         mc_pricing_list_sim.append(np.exp(-r*T)*mc_mean_pay_off_sim)
         mc_pricing_list_direct.append(np.exp(-r * T) * mc_mean_pay_off_direct)
 
+    '''
+    #saving the Data
+    pickle.dump(mc_pricing_list_sim, open('Data/mc_pricing_list_sim_MC.pkl', 'wb'))
+    pickle.dump(mc_pricing_list_direct, open('Data/mc_pricing_list_direct_MC.pkl', 'wb'))
+    pickle.dump(mc_error_list_sim, open('Data/mc_error_list_sim_MC.pkl', 'wb'))
+    pickle.dump(mc_error_list_direct, open('Data/mc_error_list_direct_MC.pkl', 'wb'))
 
     bs = BlackScholes(T, S0, K, r, sigma)
 
@@ -114,7 +134,7 @@ def diff_monte_carlo_process(T, S0, K, r, sigma, steps,save_plot=False):
     plt.show()
     plt.close()
 
-
+    '''
 
 
 def diff_K_monte_carlo_process(T,K, S0, r, sigma, steps,save_plot=False):
@@ -129,59 +149,64 @@ def diff_K_monte_carlo_process(T,K, S0, r, sigma, steps,save_plot=False):
     :return:  returns a plot of a simulated stock movement
     """
 
+    repetition = 4
+    different_k = np.linspace(80,110,dtype=int)
+    mc_pricing = defaultdict(list)
 
+    for diff_strike_price in tqdm.tqdm(different_k):
 
-    max_repetition = 10000
-    different_K = np.linspace(80,110,dtype=int)
-    mc_pricing_list_sim = []
-    mc_pricing_list_direct = []
+        mc_list = [monte_carlo(steps, T, S0, sigma, r, diff_strike_price) for i in range(repetition)]
+        num_core = 3
+        pool = multiprocessing.Pool(num_core)
+        pay_off_list = pool.map(worker_pay_off_euler, ((mc) for mc in mc_list))
+        pool.close()
+        pool.join()
 
-    mc_error_list_sim = []
-    mc_error_list_direct = []
+        mean_pay_off_sim = np.mean([pay_off[0] for pay_off in pay_off_list])
+        mean_pay_off_direct = np.mean([pay_off[1] for pay_off in pay_off_list])
 
-    for diff_strike_price in tqdm.tqdm(different_K):
+        std_pay_off_sim = np.std([pay_off[0] for pay_off in pay_off_list])/repetition
+        std_pay_off_direct = np.std([pay_off[1] for pay_off in pay_off_list]) / repetition
 
-        pay_off_array_sim=np.zeros(max_repetition)
-        pay_off_array_direct = np.zeros(max_repetition)
-        for j in range(max_repetition):
-            mc = monte_carlo(steps, T, S0, sigma, r, diff_strike_price)
-            mc.euler_integration()
-            pay_off_array_sim[j] = np.max([(mc.K-mc.euler_price_path[-1]), 0])
-            pay_off_array_direct[j] = np.max([(mc.K - mc.euler_integration), 0])
+        mc_pricing['simualted_path'].append((np.exp(-r*T)*mean_pay_off_sim ,std_pay_off_sim))
+        mc_pricing['direct_method'].append((np.exp(-r * T) * mean_pay_off_direct,std_pay_off_direct))
 
-        mc_mean_pay_off_sim = np.mean(pay_off_array_sim)
-        mc_mean_pay_off_direct = np.mean(pay_off_array_direct)
-
-        mc_error_list_sim.append(np.std(pay_off_array_sim)/np.sqrt(max_repetition))
-        mc_error_list_direct.append(np.std(pay_off_array_direct) / np.sqrt(max_repetition))
-
-        mc_pricing_list_sim.append(np.exp(-r*T)*mc_mean_pay_off_sim)
-        mc_pricing_list_direct.append(np.exp(-r * T) * mc_mean_pay_off_direct)
-
-
-    bs_list=[]
-    for k in different_K:
+    bs_list= []
+    for k in different_k:
         bs = BlackScholes(T, S0, k, r, sigma)
         bs_list.append(bs.put_price())
 
+    fig, axs = plt.subplots(2)
+    rc('text', usetex=True)
+    axs[0].plot(different_k,[i[0] for i in mc_pricing['simualted_path']], color='gray', label='Monte Carlo Sim')
+    axs[0].plot(different_k,[i[0] for i in mc_pricing['direct_method']], color='k', label='Monte Carlo Direct')
+    axs[0].plot(different_k, bs_list, 'r', label='Black Scholes')
+    axs[0].legend()
+    axs[0].set_ylabel("Option Price",fontsize=14)
+    axs[0].tick_params(labelsize='15')
 
 
-    plt.figure()
-    plt.plot(different_K,mc_pricing_list_sim,color='gray',label='Monte Carlo Sim')
-    plt.plot(different_K, mc_pricing_list_direct, color='k', label='Monte Carlo Direct')
-    plt.plot(different_K,bs_list,'r',label='Black Scholes')
-    plt.plot(different_K,mc_error_list_sim,label='Standard error Sim')
-    plt.plot(different_K,mc_error_list_direct,label='Standard error Direct')
-    plt.legend()
-    plt.plot()
-    plt.xlabel(r"Strike price S_K",fontsize=12,fontweight='bold')
-    plt.ylabel("Option Price",fontsize=12,fontweight='bold')
-    plt.xticks(fontweight='bold')
-    plt.yticks(fontweight='bold')
+    axs[1].plot(different_k,[i[1] for i in mc_pricing['simualted_path']],label='Simualted STD error')
+    axs[1].plot(different_k, [i[1] for i in mc_pricing['direct_method']],label='Direct method STD error')
+    axs[1].set_xlabel(r"Strike price $S_K$", fontsize=14)
+    axs[1].legend()
+    axs[1].set_ylabel("Standard error", fontsize=14)
+    axs[1].tick_params(labelsize='15')
+
+
     if save_plot:
-        plt.savefig("figures/"+"mc_euler_integration_diff_K",dpi=300)
+        plt.savefig("figures/" + "mc_euler_integration_diff_K", dpi=300)
     plt.show()
     plt.close()
+    plt.show()
+
+
+
+    #saving the Data
+    # pickle.dump(mc_pricing_list_sim, open('Data/mc_pricing_list_sim_K.pkl', 'wb'))
+    # pickle.dump(mc_pricing_list_direct, open('Data/mc_pricing_list_direct_K.pkl', 'wb'))
+    # pickle.dump(mc_error_list_sim, open('Data/mc_error_list_sim_K.pkl', 'wb'))
+    # pickle.dump(mc_error_list_direct, open('Data/mc_error_list_direct_K.pkl', 'wb'))
 
 
 def milstein_process(T, S0, K, r, sigma, steps,save_plot=False):
@@ -306,3 +331,4 @@ def bump_and_revalue(
 ########################################################################################################################
 ########################################################################################################################
 ########################################################################################################################
+
