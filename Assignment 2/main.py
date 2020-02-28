@@ -32,7 +32,7 @@ helper.diff_monte_carlo_process(
     max_repetition=10000,
     save_plot=True)
 
-'''
+
 helper.diff_K_monte_carlo_process(
     T=1,
     different_k=np.linspace(80,130,dtype=int),
@@ -41,8 +41,20 @@ helper.diff_K_monte_carlo_process(
     sigma=0.2,
     steps=365,
     repetition=10000,
-    save_plot=False)
-'''
+    save_plot=True)
+
+
+
+helper.diff_sigma_monte_carlo_process(
+    T=1,
+    K=99,
+    S0=100,
+    r=0.06,
+    different_sigma=np.linspace(0.01,1),
+    steps=365,
+    repetition=10000,
+    save_plot=True)
+
 
 #helper.milstein_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
 
@@ -56,9 +68,9 @@ Estimation of Sensitivities in MC:
 - and point 2 use sophisticated method discussed in the lecture
 '''
 
-mean_deltas = helper.bump_and_revalue(
-    1, 100, 99, 0.06, 0.2, 365, [0.01, 0.02, 0.5], save_plot=False
-)
+#mean_deltas = helper.bump_and_revalue(
+#    1, 100, 99, 0.06, 0.2, 365, [0.01, 0.02, 0.5], save_plot=False
+#)
 # print(mean_deltas)
 
 

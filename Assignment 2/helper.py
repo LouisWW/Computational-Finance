@@ -94,7 +94,7 @@ def diff_monte_carlo_process(T, S0, K, r, sigma, steps,increments,max_repetition
         pool.join()
 
         mean_pay_off = np.mean([pay_off for pay_off in pay_off_list])
-        std_pay_off = np.std([pay_off for pay_off in pay_off_list])/repetition
+        std_pay_off = np.std([pay_off for pay_off in pay_off_list])/np.sqrt(repetition)
         mc_pricing['euler_integration'].append((np.exp(-r*T)*mean_pay_off ,std_pay_off))
 
     bs = BlackScholes(T, S0, K, r, sigma)
@@ -108,19 +108,19 @@ def diff_monte_carlo_process(T, S0, K, r, sigma, steps,increments,max_repetition
     axs[0].tick_params(labelsize='15')
 
     axs[1].plot(different_mc_rep, [i[1] for i in mc_pricing['euler_integration']], label='Standard error')
-    axs[1].set_xlabel("Strike price K", fontsize=14)
+    axs[1].set_xlabel("Monte Carlo repetition", fontsize=14)
     axs[1].legend()
     axs[1].set_ylabel("Standard error", fontsize=14)
     axs[1].tick_params(labelsize='15')
 
     if save_plot:
-        plt.savefig("figures/" + "mc_euler_integration_diff_K", dpi=300)
+        plt.savefig("figures/" + "mc_euler_integration_diff_MC", dpi=300)
     plt.show()
     plt.close()
 
 
 
-def diff_K_monte_carlo_process(T,different_k , S0, r, sigma, steps, repetition = 10000, save_plot=False):
+def diff_K_monte_carlo_process(T,different_k , S0, r, sigma, steps, repetition, save_plot=False):
     """
     :param T:  Period
     :param S0: Stock price at spot time
@@ -131,8 +131,6 @@ def diff_K_monte_carlo_process(T,different_k , S0, r, sigma, steps, repetition =
     :param save_plot:  to save the plot
     :return:  returns a plot of a simulated stock movement
     """
-
-
 
     # mc_pricing will be a dict of a list containing  tuples of (pricing and standard error)
     mc_pricing = defaultdict(list)
@@ -147,7 +145,7 @@ def diff_K_monte_carlo_process(T,different_k , S0, r, sigma, steps, repetition =
         pool.join()
 
         mean_pay_off = np.mean([pay_off for pay_off in pay_off_list])
-        std_pay_off = np.std([pay_off for pay_off in pay_off_list])/repetition
+        std_pay_off = np.std([pay_off for pay_off in pay_off_list])/np.sqrt(repetition)
         mc_pricing['euler_integration'].append((np.exp(-r*T)*mean_pay_off,std_pay_off))
 
     bs_list= []
@@ -175,6 +173,61 @@ def diff_K_monte_carlo_process(T,different_k , S0, r, sigma, steps, repetition =
         plt.savefig("figures/" + "mc_euler_integration_diff_K", dpi=300)
     plt.show()
     plt.close()
+
+def diff_sigma_monte_carlo_process(T,K , S0, r, different_sigma, steps, repetition, save_plot=False):
+    """
+    :param T:  Period
+    :param S0: Stock price at spot time
+    :param K:  Strike price
+    :param r:  interest rate
+    :param sigma: volatility
+    :param steps: number of steps
+    :param save_plot:  to save the plot
+    :return:  returns a plot of a simulated stock movement
+    """
+
+    # mc_pricing will be a dict of a list containing  tuples of (pricing and standard error)
+    mc_pricing = defaultdict(list)
+
+    for sigma in tqdm.tqdm(different_sigma):
+
+        mc_list = [monte_carlo(steps, T, S0, sigma, r, K) for i in range(repetition)]
+        num_core = 3
+        pool = multiprocessing.Pool(num_core)
+        pay_off_list = pool.map(worker_pay_off_euler_direct, ((mc) for mc in mc_list))
+        pool.close()
+        pool.join()
+
+        mean_pay_off = np.mean([pay_off for pay_off in pay_off_list])
+        std_pay_off = np.std([pay_off for pay_off in pay_off_list])/np.sqrt(repetition)
+        mc_pricing['euler_integration'].append((np.exp(-r*T)*mean_pay_off,std_pay_off))
+
+    bs_list = []
+    for s in different_sigma:
+        bs = BlackScholes(T, S0, K, r, s)
+        bs_list.append(bs.put_price())
+
+    fig, axs = plt.subplots(2)
+    axs[0].plot(different_sigma,[i[0] for i in mc_pricing['euler_integration']],linestyle='--',linewidth=3,
+                color='gray', label='Monte Carlo')
+    axs[0].plot(different_sigma, bs_list, 'r', label='Black Scholes')
+    axs[0].legend()
+    axs[0].set_ylabel("Option Price",fontsize=14)
+    axs[0].tick_params(labelsize='15')
+
+    axs[1].plot(different_sigma,[i[1] for i in mc_pricing['euler_integration']],label='Standard error')
+    axs[1].set_xlabel("Volatility", fontsize=14)
+    axs[1].legend()
+    axs[1].set_ylabel("Standard error", fontsize=14)
+    axs[1].tick_params(labelsize='15')
+    axs[1].ticklabel_format(axis="y", style="sci",scilimits=(0,0))
+
+
+    if save_plot:
+        plt.savefig("figures/" + "mc_euler_integration_diff_sigma", dpi=300)
+    plt.show()
+    plt.close()
+
 
 
 def milstein_process(T, S0, K, r, sigma, steps,save_plot=False):
