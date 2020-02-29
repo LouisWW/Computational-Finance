@@ -37,29 +37,41 @@ Estimation of Sensitivities in MC:
 - and point 2 use sophisticated method discussed in the lecture
 '''
 
-mean_deltas = helper.bump_and_revalue(
-    1, 100, 99, 0.06, 0.2, 365, [0.01, 0.02, 0.5], reps=100, full_output=True, save_plot=False, show_plots=False
-    )
-prices_revalue, prices_bump, deltas, bs_deltas = mean_deltas
+results = helper.bump_revalue_vectorized(
+    1, 100, 99, 0.06, 0.2, 365, [0.01, 0.02, 0.5], reps=100, full_output=True, save_plot=False, show_plots=False, set_seed=1
+)
+deltas, bs_deltas = results
+print("Monte Carlo Deltas:")
 print(deltas)
-print("======================================================================")
+print("=================================================")
+print("Black Scholse Deltas:")
 print(bs_deltas)
-print("=====================================================================")
-print("PRICES REVALUE")
-print(prices_revalue)
-print("=====================================================================")
-print("=====================================================================")
-print("PRICES BUMPS")
-print(prices_bump)
-print("=====================================================================")
-print("=====================================================================")
-print("DELTAS BUMPS")
-print(deltas)
-print("=====================================================================")
-print("=====================================================================")
-print("THEORETICAL DELTAS")
-print(bs_deltas)
-print("=====================================================================")
+print("=================================================")
+
+
+# mean_deltas = helper.bump_and_revalue(
+#     1, 100, 99, 0.06, 0.2, 365, [0.01, 0.02, 0.5], reps=100, full_output=True, save_plot=False, show_plots=False
+#     )
+# prices_revalue, prices_bump, deltas, bs_deltas = mean_deltas
+# print(deltas)
+# print("======================================================================")
+# print(bs_deltas)
+# print("=====================================================================")
+# print("PRICES REVALUE")
+# print(prices_revalue)
+# print("=====================================================================")
+# print("=====================================================================")
+# print("PRICES BUMPS")
+# print(prices_bump)
+# print("=====================================================================")
+# print("=====================================================================")
+# print("DELTAS BUMPS")
+# print(deltas)
+# print("=====================================================================")
+# print("=====================================================================")
+# print("THEORETICAL DELTAS")
+# print(bs_deltas)
+# print("=====================================================================")
 
 
 '''
