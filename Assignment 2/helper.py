@@ -249,21 +249,21 @@ def bump_and_revalue(
 
     # Start simulation for each bump (eps)
     for i, eps in enumerate(epsilons):
-        S_eps = S0 + eps
+        # S_eps = S0 + eps
         for j in range(reps):
 
             # Create bump and revalue Monte Carlo (MC) objects
             mc_revalue = monte_carlo(steps, T, S0, sigma, r, K)
-            mc_bump = monte_carlo(steps, T, S_eps, sigma, r, K)
+            # mc_bump = monte_carlo(steps, T, S_eps, sigma, r, K)
 
             # Euler integration MC rev, save discounted payoff at maturity
             mc_revalue.euler_integration()
-            payoff_revalue = max([mc_revalue.K - mc_revalue.euler_integration, 0])
+            payoff_revalue = max([K - mc_revalue.euler_integration, 0])
             prices_revalue[j, i] = math.exp(-r * T) * payoff_revalue
 
             # Euler integration MC bump, save discounted payoff at maturity
-            mc_bump.euler_integration()
-            payoff_bump = max([mc_bump.K - mc_bump.euler_integration, 0])
+            # mc_bump.euler_integration()
+            payoff_bump = max([K - (mc_revalue.euler_integration + eps), 0])
             prices_bump[j, i] = math.exp(-r * T) * payoff_bump
  
         # Takes mean of prices bump and revalue and determines the delta 
@@ -280,7 +280,7 @@ def bump_and_revalue(
         deltas[i] = (mean_price_bump - mean_price_revalue) / eps
 
         # Determine theoretical delta for given bump
-        d1 = (np.log((S_eps) / K) + (r + 0.5 * sigma ** 2)
+        d1 = (np.log((S0 + eps) / K) + (r + 0.5 * sigma ** 2)
               * T) / (sigma * np.sqrt(T))
         bs_deltas[i] = -stats.norm.cdf(-d1, 0.0, 1.0)
 
