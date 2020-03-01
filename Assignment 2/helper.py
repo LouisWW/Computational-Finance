@@ -280,7 +280,7 @@ def antithetic_monte_carlo_process(T, S0, K, r, sigma, steps,save_plot=False):
 
 def bump_revalue_vectorized(
     T, S0, K, r, sigma, steps, epsilons, set_seed=None, reps=100, 
-    full_output=False, save_plot=False, show_plots=False
+    full_output=False, save_plot=False, show_plots=False, option_type="put"
 ):
     """
     """
@@ -290,7 +290,6 @@ def bump_revalue_vectorized(
     diff_eps = len(epsilons)
     deltas = np.zeros(diff_eps)
     bs_deltas = np.zeros(diff_eps)
-    zeros = np.zeros(reps)
 
     # Start MC simulation for each bump
     for i, eps in enumerate(epsilons):
@@ -309,24 +308,47 @@ def bump_revalue_vectorized(
         mc_revalue = monte_carlo(steps, T, S0, sigma, r, K)
         mc_bump = monte_carlo(steps, T, S0_eps, sigma, r, K)
 
-        # Determines mean option price at spot time  with help of Euler method
-        mc_revalue.euler_method_vectorized(numbers)
-        mc_bump.euler_method_vectorized(numbers)
-        payoff_revalue = np.maximum(K - mc_revalue.euler_vectorized, zeros)
-        payoff_bump = np.maximum(K - mc_bump.euler_vectorized, zeros)
-        prices_revalue = math.exp(-r * T) * payoff_revalue
-        prices_bump = math.exp(-r * T) * payoff_bump
+        # Euler method
+        S_rev = mc_revalue.euler_method_vectorized(numbers)
+        S_bump = mc_bump.euler_method_vectorized(numbers)
+
+        # Determine prices and delta hedging depending on option type
+        prices_revalue, prices_bump = 0, 0
+        if option_type == "digital":
+            prices_revalue = digital_call_price(K, S_rev, r, T)
+            prices_bump = digital_call_price(K, S_bump, r, T)
+            d2 = (np.log(S0_eps / K) + (r - 0.5 * sigma ** 2)
+                  * T) / (sigma * np.sqrt(T))
+            num = math.exp(-r * T) * stats.norm.pdf(d2, 0.0, 1.0)
+            den = sigma * S0_eps * math.sqrt(T)
+            bs_deltas[i] = num / den
+        else:
+            prices_revalue = put_price(K, S_rev, r, T)
+            prices_bump = put_price(K, S_bump, r, T)
+            d1 = (np.log(S0_eps / K) + (r + 0.5 * sigma ** 2)
+                  * T) / (sigma * np.sqrt(T))
+            bs_deltas[i] = -stats.norm.cdf(-d1, 0.0, 1.0)
+
         mean_revalue = prices_revalue.mean()
         mean_bump = prices_bump.mean()
 
-        # Determine MC delta and theoretical delta
+        # Determine MC delta and theoretical delta ()
         deltas[i] = (mean_bump - mean_revalue) / eps
-        d1 = (np.log(S0_eps / K) + (r + 0.5 * sigma ** 2)
-              * T) / (sigma * np.sqrt(T))
-        bs_deltas[i] = -stats.norm.cdf(-d1, 0.0, 1.0)
 
-    return deltas, bs_deltas
+    # Determine relative errors
+    errors = np.abs(1 - deltas / bs_deltas)
 
+    return deltas, bs_deltas, errors
+
+def put_price(K, S, r, T):
+    """
+    """
+    return math.exp(-r * T) * np.where(K - S > 0, K - S, 0)
+
+def digital_call_price(K, S, r, T):
+    """
+    """
+    return math.exp(-r * T) * np.where(S - K > 0, 1, 0)
 
 def bump_and_revalue(
         T, S0, K, r, sigma, steps, 

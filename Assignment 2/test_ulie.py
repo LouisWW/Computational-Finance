@@ -38,14 +38,17 @@ Estimation of Sensitivities in MC:
 '''
 
 results = helper.bump_revalue_vectorized(
-    1, 100, 99, 0.06, 0.2, 365, [0.01, 0.02, 0.5], reps=100, full_output=True, save_plot=False, show_plots=False, set_seed=1
+    1, 100, 99, 0.06, 0.2, 365, [0.01, 0.02, 0.5], reps=10000, full_output=True, save_plot=False, show_plots=False, set_seed=None, option_type="put"
 )
-deltas, bs_deltas = results
+deltas, bs_deltas, errors = results
 print("Monte Carlo Deltas:")
 print(deltas)
 print("=================================================")
 print("Black Scholse Deltas:")
 print(bs_deltas)
+print("=================================================")
+print("Relative Errors:")
+print(errors)
 print("=================================================")
 
 

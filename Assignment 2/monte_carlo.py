@@ -60,6 +60,8 @@ class monte_carlo:
         self.euler_vectorized = self.S0 * np.exp((self.r - 0.5 * self.sigma**2)
                                             * self.T + self.sigma * random_numbers)
 
+        return self.euler_vectorized
+
     def milstein_method(self):
         """
         """
@@ -98,6 +100,3 @@ class monte_carlo:
             paths_list.append(anti_wiener_price_path)
 
         return paths_list
-
-
-
