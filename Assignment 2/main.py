@@ -68,10 +68,29 @@ Estimation of Sensitivities in MC:
 - and point 2 use sophisticated method discussed in the lecture
 '''
 
-#mean_deltas = helper.bump_and_revalue(
-#    1, 100, 99, 0.06, 0.2, 365, [0.01, 0.02, 0.5], save_plot=False
-#)
-# print(mean_deltas)
+results = helper.bump_revalue_vectorized(
+    T=1, 
+    S0=100, 
+    K=99, 
+    r=0.06, 
+    sigma=0.02, 
+    steps=365, 
+    epsilons=[0.5], 
+    set_seed=[], 
+    reps=10000, 
+    full_output=False, 
+    option_type="put"
+)
+deltas, bs_deltas, errors = results
+print("Monte Carlo Deltas:")
+print(deltas)
+print("=================================================")
+print("Black Scholse Deltas:")
+print(bs_deltas)
+print("=================================================")
+print("Relative Errors:")
+print(errors)
+print("=================================================")
 
 
 '''

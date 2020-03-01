@@ -279,8 +279,8 @@ def antithetic_monte_carlo_process(T, S0, K, r, sigma, steps,save_plot=False):
     plt.close()
 
 def bump_revalue_vectorized(
-    T, S0, K, r, sigma, steps, epsilons, set_seed=[], reps=10000, 
-    full_output=False, save_plot=False, show_plots=False, option_type="put"
+    T=1, S0=100, K=99, r=0.06, sigma=0.02, steps=365, epsilons=[0.5], 
+    set_seed=[], reps=100, full_output=False, option_type="put"
 ):
     """
     """
@@ -300,54 +300,16 @@ def bump_revalue_vectorized(
         mc_revalue = monte_carlo(steps, T, S0, sigma, r, K)
         mc_bump = monte_carlo(steps, T, S0_eps, sigma, r, K)
 
-        # Set seed (if given) and generate similar sequence for bump and revalue
-        S_rev, S_bump = None, None, None
-        if set_seed:
-            np.random.seed(set_seed[i])
-            numbers = np.random.normal(size=reps)
+        # Determine stock prices at maturity
+        S_rev, S_bump = stock_prices_bump_revalue(
+                            set_seed, reps, mc_revalue, mc_bump
+                        )
 
-            # Euler method
-            S_rev = mc_revalue.euler_method_vectorized(numbers)
-            S_bump = mc_bump.euler_method_vectorized(numbers)
-        
-        # Otherwise generate a different sequence for bump and revalue
-        else:
-            numbers_rev = np.random.normal(size=reps)
-            numbers_bump = np.random.normal(size=reps)
-
-            # Euler method
-            S_rev = mc_revalue.euler_method_vectorized(numbers_rev)
-            S_bump = mc_bump.euler_method_vectorized(numbers_bump)
-
-
-        # Determine prices and delta hedging depending on option type
-        prices_revalue, prices_bump = 0, 0
-
-        # Digital option
-        if option_type == "digital":
-
-            # Determine option price
-            prices_revalue = digital_call_price(K, S_rev, r, T)
-            prices_bump = digital_call_price(K, S_bump, r, T)
-
-            # Theoretical delta
-            d2 = (np.log(S0_eps / K) + (r - 0.5 * sigma ** 2)
-                  * T) / (sigma * np.sqrt(T))
-            num = math.exp(-r * T) * stats.norm.pdf(d2, 0.0, 1.0)
-            den = sigma * S0_eps * math.sqrt(T)
-            bs_deltas[i] = num / den
-
-        # European put option
-        else:
-
-            # Determine option price
-            prices_revalue = put_price(K, S_rev, r, T)
-            prices_bump = put_price(K, S_bump, r, T)
-
-            # Theoretical delta
-            d1 = (np.log(S0_eps / K) + (r + 0.5 * sigma ** 2)
-                  * T) / (sigma * np.sqrt(T))
-            bs_deltas[i] = -stats.norm.cdf(-d1, 0.0, 1.0)
+        # Determine prices and delta hedging depending at spot time
+        results = option_prices_spot(
+            option_type, S_rev, S_bump, S0_eps, K, r, sigma, T, bs_deltas, i
+        )
+        prices_revalue, prices_bump, bs_deltas = results
 
         # Mean option prices bump and revalue
         mean_revalue = prices_revalue.mean()
@@ -359,89 +321,72 @@ def bump_revalue_vectorized(
     # Determine relative errors
     errors = np.abs(1 - deltas / bs_deltas)
 
+    # Checks if full output is required
+    if full_output:
+        return deltas, bs_deltas, errors, prices_revalue, prices_bump
+
     return deltas, bs_deltas, errors
 
-def put_price(K, S, r, T):
+def stock_prices_bump_revalue(set_seed, reps, mc_revalue, mc_bump):
     """
     """
-    return math.exp(-r * T) * np.where(K - S > 0, K - S, 0)
+    # Set seed (if given) and generate similar sequence for bump and revalue
+    S_rev, S_bump = None, None
+    if set_seed:
+        np.random.seed(set_seed[i])
+        numbers = np.random.normal(size=reps)
 
-def digital_call_price(K, S, r, T):
-    """
-    """
-    return math.exp(-r * T) * np.where(S - K > 0, 1, 0)
+        # Euler method
+        S_rev = mc_revalue.euler_method_vectorized(numbers)
+        S_bump = mc_bump.euler_method_vectorized(numbers)
 
-def bump_and_revalue(
-        T, S0, K, r, sigma, steps, 
-        epsilons, set_seed=None, reps=100, full_output=False, save_plot=False, show_plots=False
+    # Otherwise generate a different sequence for bump and revalue
+    else:
+        numbers_rev = np.random.normal(size=reps)
+        numbers_bump = np.random.normal(size=reps)
+
+        # Euler method
+        S_rev = mc_revalue.euler_method_vectorized(numbers_rev)
+        S_bump = mc_bump.euler_method_vectorized(numbers_bump)
+
+    return S_rev, S_bump
+
+def option_prices_spot(
+    option_type, S_rev, S_bump, S0_eps, K, r, sigma, T, bs_deltas, i
     ):
     """
+    Determine prices and delta hedging at spot time depending on option type
     """
+    prices_revalue, prices_bump, discount = 0, 0, math.exp(-r * T)
 
-    # Init amount of bumps (epsilons) and setup tracking variables
-    # for the prices and deltas generated in the monte carlo simulations
-    diff_eps = len(epsilons)
-    prices_revalue = np.zeros((reps, diff_eps))
-    prices_bump = np.zeros((reps, diff_eps))
-    deltas = np.zeros(diff_eps)
-    bs_deltas = np.zeros(diff_eps)
+    # Digital option
+    if option_type == "digital":
 
-    # Start simulation for each bump (eps)
-    for i, eps in enumerate(epsilons):
+        # Determine option price
+        prices_revalue = discount * np.where(S_rev - K > 0, 1, 0)
+        prices_bump = discount * np.where(S_bump - K > 0, 1, 0)
 
-        # "bumped" stock price
-        S_eps = S0 + eps
+        # Theoretical delta
+        d2 = (np.log(S0_eps / K) + (r - 0.5 * sigma ** 2)
+                * T) / (sigma * np.sqrt(T))
+        num = discount * stats.norm.pdf(d2, 0.0, 1.0)
+        den = sigma * S0_eps * math.sqrt(T)
+        bs_deltas[i] = num / den
 
-        for j in range(reps):
+    # European put option
+    else:
 
-            # Create bump and revalue Monte Carlo (MC) objects
-            mc_revalue = monte_carlo(steps, T, S0, sigma, r, K)
-            mc_bump = monte_carlo(steps, T, S_eps, sigma, r, K)
+        # Determine option price
+        prices_revalue = discount * np.where(K - S_rev > 0, K - S_rev, 0)
+        prices_bump = discount * np.where(K - S_bump > 0, K - S_bump, 0)
 
-            # Euler integration MC rev, save discounted payoff at maturity
-            mc_revalue.euler_integration_method()
-            payoff_revalue = max([K - mc_revalue.euler_integration, 0])
-            prices_revalue[j, i] = math.exp(-r * T) * payoff_revalue
-
-            # Euler integration MC bump, save discounted payoff at maturity
-            mc_bump.euler_integration_method()
-            payoff_bump = max([K - mc_bump.euler_integration, 0])
-            prices_bump[j, i] = math.exp(-r * T) * payoff_bump
- 
-        # Takes mean of prices bump and revalue and determines the delta 
-        # for a given bump
-        mean_price_revalue = prices_revalue[:, i].mean()
-        mean_price_bump = prices_bump[:, i].mean()
-        print("=============================================")
-        print(f"REVALUE WITH EPS = {eps}")
-        print(round(mean_price_revalue, 3))
-        print("=============================================")
-        print(f"BUMP WITH EPS = {eps}")
-        print(round(mean_price_bump, 3))
-        print("=============================================")
-        deltas[i] = (mean_price_bump - mean_price_revalue) / eps
-
-        # Determine theoretical delta for given bump
-        d1 = (np.log((S0 + eps) / K) + (r + 0.5 * sigma ** 2)
-              * T) / (sigma * np.sqrt(T))
+        # Theoretical delta
+        d1 = (np.log(S0_eps / K) + (r + 0.5 * sigma ** 2)
+                * T) / (sigma * np.sqrt(T))
         bs_deltas[i] = -stats.norm.cdf(-d1, 0.0, 1.0)
 
-    # Makes histograms of the prices generated by MC process
-    if show_plots:
-        prices = (prices_revalue, prices_bump)
-        for i in range(len(prices)):
-            for j, eps in enumerate(epsilons):
-                fig = plt.figure()
-                plt.hist(prices[i][:, j], bins=10)
-                plt.title(f"Epsilon = {eps}")
-                plt.show()
-                plt.close()
+    return prices_revalue, prices_bump, bs_deltas
 
-
-    if full_output:
-        return prices_revalue, prices_bump, deltas, bs_deltas
-
-    return deltas, bs_deltas
 
 ########################################################################################################################
 ########################################################################################################################

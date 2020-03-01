@@ -38,7 +38,17 @@ Estimation of Sensitivities in MC:
 '''
 
 results = helper.bump_revalue_vectorized(
-    1, 100, 99, 0.06, 0.2, 365, [0.01, 0.02, 0.5], reps=10000, full_output=True, save_plot=False, show_plots=False, set_seed=[], option_type="put"
+    T=1,
+    S0=100,
+    K=99,
+    r=0.06,
+    sigma=0.02,
+    steps=365,
+    epsilons=[0.5],
+    set_seed=[],
+    reps=10000,
+    full_output=False,
+    option_type="put"
 )
 deltas, bs_deltas, errors = results
 print("Monte Carlo Deltas:")
@@ -50,32 +60,6 @@ print("=================================================")
 print("Relative Errors:")
 print(errors)
 print("=================================================")
-
-
-# mean_deltas = helper.bump_and_revalue(
-#     1, 100, 99, 0.06, 0.2, 365, [0.01, 0.02, 0.5], reps=100, full_output=True, save_plot=False, show_plots=False
-#     )
-# prices_revalue, prices_bump, deltas, bs_deltas = mean_deltas
-# print(deltas)
-# print("======================================================================")
-# print(bs_deltas)
-# print("=====================================================================")
-# print("PRICES REVALUE")
-# print(prices_revalue)
-# print("=====================================================================")
-# print("=====================================================================")
-# print("PRICES BUMPS")
-# print(prices_bump)
-# print("=====================================================================")
-# print("=====================================================================")
-# print("DELTAS BUMPS")
-# print(deltas)
-# print("=====================================================================")
-# print("=====================================================================")
-# print("THEORETICAL DELTAS")
-# print(bs_deltas)
-# print("=====================================================================")
-
 
 '''
 Variance Reduction:
