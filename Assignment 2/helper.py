@@ -8,6 +8,7 @@ Louis Weyland, Floris Fok and Julien Fer
 """
 
 import math
+import os
 from monte_carlo import monte_carlo
 import matplotlib.pyplot as plt
 import numpy as np
@@ -278,11 +279,52 @@ def antithetic_monte_carlo_process(T, S0, K, r, sigma, steps,save_plot=False):
     plt.show()
     plt.close()
 
+
+def diff_iter_bump_and_revalue(
+    T, S0, K, r, sigma, steps, epsilons=[0.5], set_seed=[],
+    iterations=[100], full_output=False, 
+    option_type=None, contract="put", save_output=False
+    ):
+    """
+    Applies bump and revalue for for different amount of iterations
+    """
+
+    # Setup storage for results of the different MC simulations
+    diff_iter, diff_eps = len(iterations), len(epsilons)
+    deltas = np.zeros((diff_iter, diff_eps))
+    bs_deltas = np.zeros((diff_iter, diff_eps))
+    errors = np.zeros((diff_iter, diff_eps))
+
+    # Apply bump and revalue method for each number of iterations
+    for i, iteration in enumerate(iterations):
+        result = bump_revalue_vectorized(T, S0, K, r, sigma, steps, 
+                    epsilons=epsilons, set_seed=set_seed, reps=iteration, 
+                    full_output=full_output, option_type=option_type
+                )
+        deltas[i, :], bs_deltas[i, :], errors[i, :] = result
+
+    # if required output is saved (random seed)
+    if save_output and set_seed:
+        name = os.path.join("Data", "bump_and_revalue_fixed_seed_")
+        np.save(name + f"deltas_K={K}_sigma={sigma}.npy", deltas)
+        np.save(name + f"BSdeltas_K={K}_sigma={sigma}.npy", bs_deltas)
+        np.save(name + f"errors_K={K}_sigma={sigma}.npy", errors)
+
+    # if required output is saved (fixed seed)
+    elif save_output and not set_seed:
+        name = os.path.join("Data", "bump_and_revalue_")
+        np.save(name + f"deltas_K={K}_sigma={sigma}.npy", deltas)
+        np.save(name + f"BSdeltas_K={K}_sigma={sigma}.npy", bs_deltas)
+        np.save(name + f"errors_K={K}_sigma={sigma}.npy", errors)
+
+    return deltas, bs_deltas, errors
+
 def bump_revalue_vectorized(
-    T=1, S0=100, K=99, r=0.06, sigma=0.2, steps=365, epsilons=[0.5], 
-    set_seed=[], reps=100, full_output=False, option_type="put"
+    T, S0, K, r, sigma, steps, epsilons=[0.5],
+    set_seed=[], reps=100, full_output=False, option_type=None, contract="put"
 ):
     """
+    Applies bump and revalue method to determine the delta at spot time
     """
     
     # Init amount of bumps (epsilons) and storage (Black Scholes) deltas
@@ -307,7 +349,9 @@ def bump_revalue_vectorized(
 
         # Determine prices and delta hedging depending at spot time
         results = option_prices_spot(
-            option_type, S_rev, S_bump, S0_eps, K, r, sigma, T, bs_deltas, i
+            option_type, contract, S_rev, 
+            S_bump, S0_eps, K, r, sigma, 
+            T, bs_deltas, i
         )
         prices_revalue, prices_bump, bs_deltas = results
 
@@ -352,15 +396,27 @@ def stock_prices_bump_revalue(set_seed, reps, mc_revalue, mc_bump, i):
     return S_rev, S_bump
 
 def option_prices_spot(
-    option_type, S_rev, S_bump, S0_eps, K, r, sigma, T, bs_deltas, i
+    option_type, contract, S_rev, S_bump, S0_eps, K, r, sigma, T, bs_deltas, i
     ):
     """
     Determine prices and delta hedging at spot time depending on option type
     """
     prices_revalue, prices_bump, discount = 0, 0, math.exp(-r * T)
 
+    # European put option
+    if not option_type and contract == "put":
+
+        # Determine option price
+        prices_revalue = discount * np.where(K - S_rev > 0, K - S_rev, 0)
+        prices_bump = discount * np.where(K - S_bump > 0, K - S_bump, 0)
+
+        # Theoretical delta
+        d1 = (np.log(S0_eps / K) + (r + 0.5 * sigma ** 2)
+              * T) / (sigma * np.sqrt(T))
+        bs_deltas[i] = -stats.norm.cdf(-d1, 0.0, 1.0)
+
     # Digital option
-    if option_type == "digital":
+    elif option_type == "digital" and contract == "call":
 
         # Determine option price
         prices_revalue = discount * np.where(S_rev - K > 0, 1, 0)
@@ -372,18 +428,6 @@ def option_prices_spot(
         num = discount * stats.norm.pdf(d2, 0.0, 1.0)
         den = sigma * S0_eps * math.sqrt(T)
         bs_deltas[i] = num / den
-
-    # European put option
-    else:
-
-        # Determine option price
-        prices_revalue = discount * np.where(K - S_rev > 0, K - S_rev, 0)
-        prices_bump = discount * np.where(K - S_bump > 0, K - S_bump, 0)
-
-        # Theoretical delta
-        d1 = (np.log(S0_eps / K) + (r + 0.5 * sigma ** 2)
-                * T) / (sigma * np.sqrt(T))
-        bs_deltas[i] = -stats.norm.cdf(-d1, 0.0, 1.0)
 
     return prices_revalue, prices_bump, bs_deltas
 

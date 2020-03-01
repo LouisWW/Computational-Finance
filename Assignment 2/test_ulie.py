@@ -37,28 +37,38 @@ Estimation of Sensitivities in MC:
 - and point 2 use sophisticated method discussed in the lecture
 '''
 
-results = helper.bump_revalue_vectorized(
+epsilons = [0.01, 0.02, 0.5]
+# set_seed = []
+
+# epsilons = [0.01 * (x + 1) for x in range(5)]
+set_seed = [10] * len(epsilons)
+
+
+results = helper.diff_iter_bump_and_revalue(
     T=1,
     S0=100,
     K=99,
     r=0.06,
     sigma=0.2,
     steps=365,
-    epsilons=[0.01, 0.02, 0.05],
-    set_seed=[10, 10, 10],
-    reps=10000,
+    epsilons=epsilons, 
+    set_seed=set_seed,
+    iterations=[10000, 100000, 1000000, 10000000],
     full_output=False,
-    option_type="put"
+    option_type=None,
+    contract="put", 
+    save_output=False
 )
+
 deltas, bs_deltas, errors = results
 print("Monte Carlo Deltas:")
-print(deltas)
+print(deltas.round(3))
 print("=================================================")
 print("Black Scholse Deltas:")
-print(bs_deltas)
+print(bs_deltas.round(3))
 print("=================================================")
 print("Relative Errors:")
-print(errors)
+print(errors.round(3))
 print("=================================================")
 
 '''
