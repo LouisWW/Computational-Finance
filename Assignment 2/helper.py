@@ -279,7 +279,7 @@ def antithetic_monte_carlo_process(T, S0, K, r, sigma, steps,save_plot=False):
     plt.close()
 
 def bump_revalue_vectorized(
-    T=1, S0=100, K=99, r=0.06, sigma=0.02, steps=365, epsilons=[0.5], 
+    T=1, S0=100, K=99, r=0.06, sigma=0.2, steps=365, epsilons=[0.5], 
     set_seed=[], reps=100, full_output=False, option_type="put"
 ):
     """
@@ -302,7 +302,7 @@ def bump_revalue_vectorized(
 
         # Determine stock prices at maturity
         S_rev, S_bump = stock_prices_bump_revalue(
-                            set_seed, reps, mc_revalue, mc_bump
+                            set_seed, reps, mc_revalue, mc_bump, i
                         )
 
         # Determine prices and delta hedging depending at spot time
@@ -327,7 +327,7 @@ def bump_revalue_vectorized(
 
     return deltas, bs_deltas, errors
 
-def stock_prices_bump_revalue(set_seed, reps, mc_revalue, mc_bump):
+def stock_prices_bump_revalue(set_seed, reps, mc_revalue, mc_bump, i):
     """
     """
     # Set seed (if given) and generate similar sequence for bump and revalue
