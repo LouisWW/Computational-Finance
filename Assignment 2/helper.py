@@ -283,7 +283,7 @@ def antithetic_monte_carlo_process(T, S0, K, r, sigma, steps,save_plot=False):
 def diff_iter_bump_and_revalue(
     T, S0, K, r, sigma, steps, epsilons=[0.5], set_seed=[],
     iterations=[100], full_output=False, 
-    option_type=None, contract="put", save_output=False
+    option_type="regular", contract="put", save_output=False
     ):
     """
     Applies bump and revalue for for different amount of iterations
@@ -299,20 +299,24 @@ def diff_iter_bump_and_revalue(
     for i, iteration in enumerate(iterations):
         result = bump_revalue_vectorized(T, S0, K, r, sigma, steps, 
                     epsilons=epsilons, set_seed=set_seed, reps=iteration, 
-                    full_output=full_output, option_type=option_type
+                    full_output=full_output, option_type=option_type, contract=contract
                 )
         deltas[i, :], bs_deltas[i, :], errors[i, :] = result
 
     # if required output is saved (random seed)
     if save_output and set_seed:
-        name = os.path.join("Data", "bump_and_revalue_fixed_seed_")
+        name = os.path.join(
+            "Data", f"{option_type}-{contract}_bump_and_revalue_fixedseed_"
+            )
         np.save(name + f"deltas_K={K}_sigma={sigma}.npy", deltas)
         np.save(name + f"BSdeltas_K={K}_sigma={sigma}.npy", bs_deltas)
         np.save(name + f"errors_K={K}_sigma={sigma}.npy", errors)
 
     # if required output is saved (fixed seed)
     elif save_output and not set_seed:
-        name = os.path.join("Data", "bump_and_revalue_")
+        name = os.path.join(
+            "Data", f"{option_type}-{contract}_bump_and_revalue_randomseed"
+            )
         np.save(name + f"deltas_K={K}_sigma={sigma}.npy", deltas)
         np.save(name + f"BSdeltas_K={K}_sigma={sigma}.npy", bs_deltas)
         np.save(name + f"errors_K={K}_sigma={sigma}.npy", errors)
@@ -321,7 +325,7 @@ def diff_iter_bump_and_revalue(
 
 def bump_revalue_vectorized(
     T, S0, K, r, sigma, steps, epsilons=[0.5],
-    set_seed=[], reps=100, full_output=False, option_type=None, contract="put"
+    set_seed=[], reps=100, full_output=False, option_type="regular", contract="put"
 ):
     """
     Applies bump and revalue method to determine the delta at spot time
@@ -362,8 +366,9 @@ def bump_revalue_vectorized(
         # Determine MC delta
         deltas[i] = (mean_bump - mean_revalue) / eps
 
-    # Determine relative errors
-    errors = np.abs(1 - deltas / bs_deltas)
+    # Determine relative (percent) errors
+    # errors = np.abs((bs_deltas - deltas) / deltas) * 100
+    errors = np.abs(1 - (deltas / bs_deltas))
 
     # Checks if full output is required
     if full_output:
@@ -404,7 +409,7 @@ def option_prices_spot(
     prices_revalue, prices_bump, discount = 0, 0, math.exp(-r * T)
 
     # European put option
-    if not option_type and contract == "put":
+    if option_type == "regular" and contract == "put":
 
         # Determine option price
         prices_revalue = discount * np.where(K - S_rev > 0, K - S_rev, 0)
@@ -431,6 +436,38 @@ def option_prices_spot(
 
     return prices_revalue, prices_bump, bs_deltas
 
+
+def LR_method(T, S0, K, r, sigma, steps, set_seed=[], reps=[100]):
+    """
+    ONLY FOR DIGITAL OPTION.
+    """
+
+    deltas = np.zeros(len(reps))
+    discount = math.exp(-r * T)
+    mc = monte_carlo(steps, T, S0, sigma, r, K)
+    for i, rep in enumerate(reps):
+
+        if set_seed:
+            np.random.seed(set_seed[i])
+
+        numbers = np.random.normal(size=rep)
+        scores = numbers / (S0 * sigma * math.sqrt(T))
+        S = mc.euler_method_vectorized(numbers)
+        payoffs = np.where(S - K > 0, 1, 0)
+        d = discount * payoffs * scores
+        deltas[i] = d.mean()
+
+    # Theoretical delta
+    d2 = (np.log(S0 / K) + (r - 0.5 * sigma ** 2)
+            * T) / (sigma * np.sqrt(T))
+    num = discount * stats.norm.pdf(d2, 0.0, 1.0)
+    den = sigma * S0 * math.sqrt(T)
+    bs_delta = num / den
+
+    # Determine relative errors
+    errors = np.abs(1 - (deltas / bs_delta))
+
+    return deltas, bs_delta, errors
 
 ########################################################################################################################
 ########################################################################################################################

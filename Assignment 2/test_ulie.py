@@ -37,12 +37,53 @@ Estimation of Sensitivities in MC:
 - and point 2 use sophisticated method discussed in the lecture
 '''
 
+set_seed = []
+reps = [10000, 100000, 1000000, 10000000]
+# set_seed = [10] * len(reps)
+
+results = helper.LR_method(
+    T=1, 
+    S0=100, 
+    K=99, 
+    r=0.06, 
+    sigma=0.2, 
+    steps=365, 
+    set_seed=set_seed, 
+    reps=reps
+)
+deltas, bs_delta, errors = results
+print("Monte Carlo Deltas:")
+print(deltas.round(3))
+print("=================================================")
+print("Black Scholse Deltas:")
+print(round(bs_delta, 3))
+print("=================================================")
+print("Relative Errors:")
+print(errors.round(3))
+print("=================================================")
+
 epsilons = [0.01, 0.02, 0.5]
-# set_seed = []
+set_seed = []
 
 # epsilons = [0.01 * (x + 1) for x in range(5)]
-set_seed = [10] * len(epsilons)
+# set_seed = [10] * len(epsilons)
 
+
+# results = helper.diff_iter_bump_and_revalue(
+#     T=1,
+#     S0=100,
+#     K=99,
+#     r=0.06,
+#     sigma=0.2,
+#     steps=365,
+#     epsilons=epsilons, 
+#     set_seed=set_seed,
+#     iterations=[10000, 100000, 1000000, 10000000],
+#     full_output=False,
+#     option_type="regular",
+#     contract="put", 
+#     save_output=False
+# )
 
 results = helper.diff_iter_bump_and_revalue(
     T=1,
@@ -51,12 +92,12 @@ results = helper.diff_iter_bump_and_revalue(
     r=0.06,
     sigma=0.2,
     steps=365,
-    epsilons=epsilons, 
+    epsilons=epsilons,
     set_seed=set_seed,
     iterations=[10000, 100000, 1000000, 10000000],
     full_output=False,
-    option_type=None,
-    contract="put", 
+    option_type="digital",
+    contract="call",
     save_output=False
 )
 
