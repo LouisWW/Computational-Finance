@@ -469,6 +469,41 @@ def LR_method(T, S0, K, r, sigma, steps, set_seed=[], reps=[100]):
 
     return deltas, bs_delta, errors
 
+def monte_carlo_asian(T, S0, K, r, sigma, steps, period=False, reps=100):
+    '''
+    :param T: time in years
+    :param S0: stock price at time = 0
+    :param K: sttrike price
+    :param r: risk free rate
+    :param sigma: volatility
+    :param steps: amount of intervals in time
+    :param period: time window of asian average pricing in number of steps
+    :param reps: amount of repetitions of the monte carlo progress
+    :return: option price and list of payoffs
+    '''
+
+    # Initialize the monte carlo class
+    mc = monte_carlo(steps, T, S0, sigma, r, K)
+    payoffs = np.zeros(reps)
+
+    for rep in range(reps):
+        # Create wiener process
+        mc.wiener_method()
+
+        # Take chucks of periods, or all prices
+        if period:
+            prices = mc.wiener_price_path[::period]
+        else:
+            prices = mc.wiener_price_path
+
+        # take the mean of the periods
+        mean_price = (sum(prices) / len(prices))
+        payoffs[rep] = max(mean_price - mc.K, 0)
+
+    # calculate the price by finding the mean of the payoffs
+    option_price = np.mean(payoffs)
+    return option_price, payoffs
+
 ########################################################################################################################
 ########################################################################################################################
 ########################################################################################################################
