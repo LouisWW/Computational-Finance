@@ -19,8 +19,8 @@ Basic Option Valuation :
 - estimate the Standard error and accuracy
 '''
 
-# helper.plot_wiener_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
-
+# helper.plot_wiener_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=True)
+'''
 helper.diff_monte_carlo_process(
     T=1,
     S0=100,
@@ -55,7 +55,7 @@ helper.diff_sigma_monte_carlo_process(
     repetition=10000,
     save_plot=True)
 
-
+'''
 #helper.milstein_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
 
 #helper.antithetic_monte_carlo_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
