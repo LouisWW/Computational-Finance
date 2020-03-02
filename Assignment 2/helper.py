@@ -40,14 +40,13 @@ def plot_wiener_process(T, S0, K, r, sigma, steps,save_plot=False):
     mc.wiener_method()
 
 
-    plt.figure()
+    plt.figure(figsize=(10, 7))
     np.linspace(1,mc.T*365,mc.steps)#to ensure the x-axis is in respective to the total time T
     plt.plot(np.linspace(1,mc.T*365,mc.steps),mc.wiener_price_path)
-    plt.xlabel("Days",fontsize=12,fontweight='bold')
-    plt.ylabel("Stock price",fontsize=12,fontweight='bold')
-    plt.xticks(fontweight='bold')
-    plt.yticks(fontweight='bold')
-    plt.title("Stock price simulated based on the Wiener process",fontsize=14,fontweight='bold')
+    plt.xlabel("Days",fontsize=18,fontweight='bold')
+    plt.ylabel("Stock price",fontsize=18,fontweight='bold')
+    plt.tick_params(labelsize='18')
+    #plt.title("Stock price simulated based on the Wiener process",fontsize=17,fontweight='bold')
     if save_plot:
         plt.savefig("figures/"+"wiener_process",dpi=300)
     plt.show()
@@ -101,18 +100,19 @@ def diff_monte_carlo_process(T, S0, K, r, sigma, steps,increments,max_repetition
     bs = BlackScholes(T, S0, K, r, sigma)
     bs_solution=np.ones(increments)*bs.put_price()
 
-    fig, axs = plt.subplots(2)
+    fig, axs = plt.subplots(2,figsize=(10, 7))
     axs[0].plot(different_mc_rep, [i[0] for i in mc_pricing['euler_integration']], color='gray', label='Monte Carlo')
     axs[0].plot(different_mc_rep, bs_solution, 'r', label='Black Scholes')
     axs[0].legend()
-    axs[0].set_ylabel("Option Price", fontsize=14)
-    axs[0].tick_params(labelsize='15')
+    axs[0].set_ylabel("Option Price", fontsize=17)
+    axs[0].tick_params(labelsize='18')
 
     axs[1].plot(different_mc_rep, [i[1] for i in mc_pricing['euler_integration']], label='Standard error')
-    axs[1].set_xlabel("Monte Carlo repetition", fontsize=14)
+    axs[1].set_xlabel("Monte Carlo repetition", fontsize=17)
     axs[1].legend()
-    axs[1].set_ylabel("Standard error", fontsize=14)
-    axs[1].tick_params(labelsize='15')
+    axs[1].set_ylabel("Standard error", fontsize=17)
+    axs[1].tick_params(labelsize='18')
+    axs[1].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
 
     if save_plot:
         plt.savefig("figures/" + "mc_euler_integration_diff_MC", dpi=300)
@@ -154,19 +154,20 @@ def diff_K_monte_carlo_process(T,different_k , S0, r, sigma, steps, repetition, 
         bs = BlackScholes(T, S0, k, r, sigma)
         bs_list.append(bs.put_price())
 
-    fig, axs = plt.subplots(2)
+    fig, axs = plt.subplots(2,figsize=(10, 7))
+
     axs[0].plot(different_k,[i[0] for i in mc_pricing['euler_integration']],linestyle='--',linewidth=3,
                 color='gray', label='Monte Carlo')
     axs[0].plot(different_k, bs_list, 'r', label='Black Scholes')
     axs[0].legend()
-    axs[0].set_ylabel("Option Price",fontsize=14)
-    axs[0].tick_params(labelsize='15')
+    axs[0].set_ylabel("Option Price",fontsize=17)
+    axs[0].tick_params(labelsize='18')
 
     axs[1].plot(different_k,[i[1] for i in mc_pricing['euler_integration']],label='Standard error')
-    axs[1].set_xlabel("Strike price K", fontsize=14)
+    axs[1].set_xlabel("Strike price K", fontsize=17)
     axs[1].legend()
-    axs[1].set_ylabel("Standard error", fontsize=14)
-    axs[1].tick_params(labelsize='15')
+    axs[1].set_ylabel("Standard error", fontsize=17)
+    axs[1].tick_params(labelsize='18')
     axs[1].ticklabel_format(axis="y", style="sci",scilimits=(0,0))
 
 
@@ -208,19 +209,19 @@ def diff_sigma_monte_carlo_process(T,K , S0, r, different_sigma, steps, repetiti
         bs = BlackScholes(T, S0, K, r, s)
         bs_list.append(bs.put_price())
 
-    fig, axs = plt.subplots(2)
+    fig, axs = plt.subplots(2,figsize=(10, 7))
     axs[0].plot(different_sigma,[i[0] for i in mc_pricing['euler_integration']],linestyle='--',linewidth=3,
                 color='gray', label='Monte Carlo')
     axs[0].plot(different_sigma, bs_list, 'r', label='Black Scholes')
     axs[0].legend()
-    axs[0].set_ylabel("Option Price",fontsize=14)
-    axs[0].tick_params(labelsize='15')
+    axs[0].set_ylabel("Option Price",fontsize=18)
+    axs[0].tick_params(labelsize='18')
 
     axs[1].plot(different_sigma,[i[1] for i in mc_pricing['euler_integration']],label='Standard error')
-    axs[1].set_xlabel("Volatility", fontsize=14)
+    axs[1].set_xlabel("Volatility", fontsize=18)
     axs[1].legend()
-    axs[1].set_ylabel("Standard error", fontsize=14)
-    axs[1].tick_params(labelsize='15')
+    axs[1].set_ylabel("Standard error", fontsize=18)
+    axs[1].tick_params(labelsize='18')
     axs[1].ticklabel_format(axis="y", style="sci",scilimits=(0,0))
 
 
@@ -254,7 +255,7 @@ def milstein_process(T, S0, K, r, sigma, steps,save_plot=False):
     plt.ylabel("Stock price", fontsize=12, fontweight='bold')
     plt.xticks(fontweight='bold')
     plt.yticks(fontweight='bold')
-    plt.title("Milestein method", fontsize=14, fontweight='bold')
+    plt.title("Milestein method", fontsize=17, fontweight='bold')
     if save_plot:
         plt.savefig("figures/" + "milestein method", dpi=300)
     plt.show()
@@ -273,7 +274,7 @@ def antithetic_monte_carlo_process(T, S0, K, r, sigma, steps,save_plot=False):
     plt.plot(path_list[1])
     plt.xlabel("Days", fontsize=12, fontweight='bold')
     plt.ylabel("Stock price", fontsize=12, fontweight='bold')
-    plt.title("Antithetic Monte Carlo", fontsize=14, fontweight='bold')
+    plt.title("Antithetic Monte Carlo", fontsize=17, fontweight='bold')
     plt.xticks(fontweight='bold')
     plt.yticks(fontweight='bold')
     plt.show()
@@ -282,7 +283,7 @@ def antithetic_monte_carlo_process(T, S0, K, r, sigma, steps,save_plot=False):
 
 def diff_iter_bump_and_revalue(
     T, S0, K, r, sigma, steps, epsilons=[0.5], set_seed=[],
-    iterations=[100], full_output=False, 
+    iterations=[100], full_output=False,
     option_type="regular", contract="put", save_output=False
     ):
     """
@@ -297,8 +298,8 @@ def diff_iter_bump_and_revalue(
 
     # Apply bump and revalue method for each number of iterations
     for i, iteration in enumerate(iterations):
-        result = bump_revalue_vectorized(T, S0, K, r, sigma, steps, 
-                    epsilons=epsilons, set_seed=set_seed, reps=iteration, 
+        result = bump_revalue_vectorized(T, S0, K, r, sigma, steps,
+                    epsilons=epsilons, set_seed=set_seed, reps=iteration,
                     full_output=full_output, option_type=option_type, contract=contract
                 )
         deltas[i, :], bs_deltas[i, :], errors[i, :] = result
@@ -353,8 +354,8 @@ def bump_revalue_vectorized(
 
         # Determine prices and delta hedging depending at spot time
         results = option_prices_spot(
-            option_type, contract, S_rev, 
-            S_bump, S0_eps, K, r, sigma, 
+            option_type, contract, S_rev,
+            S_bump, S0_eps, K, r, sigma,
             T, bs_deltas, i
         )
         prices_revalue, prices_bump, bs_deltas = results
@@ -411,6 +412,7 @@ def option_prices_spot(
     # European put option
     if option_type == "regular" and contract == "put":
 
+        print(S_rev)
         # Determine option price
         prices_revalue = discount * np.where(K - S_rev > 0, K - S_rev, 0)
         prices_bump = discount * np.where(K - S_bump > 0, K - S_bump, 0)

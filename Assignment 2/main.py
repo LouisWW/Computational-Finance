@@ -19,8 +19,8 @@ Basic Option Valuation :
 - estimate the Standard error and accuracy
 '''
 
-# helper.plot_wiener_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
-
+# helper.plot_wiener_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=True)
+'''
 helper.diff_monte_carlo_process(
     T=1,
     S0=100,
@@ -55,7 +55,7 @@ helper.diff_sigma_monte_carlo_process(
     repetition=10000,
     save_plot=True)
 
-
+'''
 #helper.milstein_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
 
 #helper.antithetic_monte_carlo_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
@@ -68,28 +68,79 @@ Estimation of Sensitivities in MC:
 - and point 2 use sophisticated method discussed in the lecture
 '''
 
-results = helper.bump_revalue_vectorized(
-    T=1, 
-    S0=100, 
-    K=99, 
-    r=0.06, 
-    sigma=0.2, 
-    steps=365, 
-    epsilons=[0.01, 0.02, 0.05], 
-    set_seed=[], 
-    reps=10000, 
-    full_output=False, 
-    option_type="put"
+set_seed = []
+reps = [10000, 100000, 1000000, 10000000]
+# set_seed = [10] * len(reps)
+
+results = helper.LR_method(
+    T=1,
+    S0=100,
+    K=99,
+    r=0.06,
+    sigma=0.2,
+    steps=365,
+    set_seed=set_seed,
+    reps=reps
 )
-deltas, bs_deltas, errors = results
+deltas, bs_delta, errors = results
 print("Monte Carlo Deltas:")
-print(deltas)
+print(deltas.round(3))
 print("=================================================")
 print("Black Scholse Deltas:")
-print(bs_deltas)
+print(round(bs_delta, 3))
 print("=================================================")
 print("Relative Errors:")
-print(errors)
+print(errors.round(3))
+print("=================================================")
+
+epsilons = [0.01, 0.02, 0.5]
+set_seed = []
+
+# epsilons = [0.01 * (x + 1) for x in range(5)]
+# set_seed = [10] * len(epsilons)
+
+
+# results = helper.diff_iter_bump_and_revalue(
+#     T=1,
+#     S0=100,
+#     K=99,
+#     r=0.06,
+#     sigma=0.2,
+#     steps=365,
+#     epsilons=epsilons,
+#     set_seed=set_seed,
+#     iterations=[10000, 100000, 1000000, 10000000],
+#     full_output=False,
+#     option_type="regular",
+#     contract="put",
+#     save_output=False
+# )
+
+results = helper.diff_iter_bump_and_revalue(
+    T=1,
+    S0=100,
+    K=99,
+    r=0.06,
+    sigma=0.2,
+    steps=365,
+    epsilons=epsilons,
+    set_seed=set_seed,
+    iterations=[10000, 100000, 1000000, 10000000],
+    full_output=False,
+    option_type="digital",
+    contract="call",
+    save_output=False
+)
+
+deltas, bs_deltas, errors = results
+print("Monte Carlo Deltas:")
+print(deltas.round(3))
+print("=================================================")
+print("Black Scholse Deltas:")
+print(bs_deltas.round(3))
+print("=================================================")
+print("Relative Errors:")
+print(errors.round(3))
 print("=================================================")
 
 
