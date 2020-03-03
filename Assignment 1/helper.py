@@ -16,11 +16,13 @@ import multiprocessing
 # import 3th party libraries
 import numpy as np
 import matplotlib.pyplot as plt
+
 import yfinance as yf
 from collections import defaultdict
 
 # Import onw modules
 from Binomial_tree import BinTreeOption, BlackScholes
+
 
 def binomial_tree_1(N, T, S, K, r,market,option_type,save_plot=False):
     '''

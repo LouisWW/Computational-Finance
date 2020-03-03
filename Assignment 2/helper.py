@@ -6,7 +6,7 @@ Created on Friday Feb 20 2020
 This code was implemented by
 Louis Weyland, Floris Fok and Julien Fer
 """
-
+import argparse
 import math
 import os
 from monte_carlo import monte_carlo
@@ -19,6 +19,7 @@ import multiprocessing
 from Binomial_tree import BinTreeOption, BlackScholes
 import tqdm
 import pickle
+
 
 
 
