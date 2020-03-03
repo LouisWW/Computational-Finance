@@ -263,6 +263,39 @@ class BlackScholes:
 
         return put
 
+    def asian_call_price(self, t=0) :
+        """
+        """
+        N = self.steps
+        sigma = self.sigma * np.sqrt(((N + 1) * (2 * N + 1)) / (6 * N ** 2))
+        b = ((N + 1) / (2 * N)) * (self.r - 0.5 * (sigma ** 2))
+
+        d1 = ((np.log(self.K / self.S0) + (b + 0.5 * self.sigma ** 2) * (self.T - t)) /
+              (sigma * np.sqrt(self.T - t)))
+
+        d2 = d1 - sigma * np.sqrt(self.T - t)
+
+        call = (self.S0 * np.exp((b - self.r) * self.T) * st.norm.cdf(d1, 0.0, 1.0) - self.K *
+                np.exp(-self.r * self.T) * st.norm.cdf(d2, 0.0, 1.0))
+
+        return call
+
+    def asian_put_price(self, t=0) :
+        """
+        """
+        N = self.steps
+        sigma = self.sigma * np.sqrt(((N + 1) * (2 * N + 1)) / (6 * N ** 2))
+        b = ((N + 1) / (2 * N)) * (self.r - 0.5 * (sigma ** 2))
+
+        d1 = ((np.log(self.K / self.S0) + (b + 0.5 * sigma ** 2) * (self.T - t)) /
+              (sigma * np.sqrt(self.T - t)))
+
+        d2 = d1 - (sigma * np.sqrt(self.T - t))
+
+        put = self.K * np.exp(-self.r * self.T) * st.norm.cdf(-d2, 0.0, 1.0) - (
+                    self.S0 * np.exp((b - self.r) * self.T) * st.norm.cdf(-d1, 0.0, 1.0))
+        return put
+
     def create_price_path(self):
         """
         """
