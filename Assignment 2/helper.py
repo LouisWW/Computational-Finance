@@ -534,7 +534,7 @@ def control_variance_asian(T=1, S0=100, K=99, r=0.06, sigma=0.2, steps=100, reps
     sigma_mean = sigma / np.sqrt(3)
     sigma_gmean =  sigma * np.sqrt(((N + 1) * (2 * N + 1)) / (6 * N ** 2))
 
-    B = (sigma_mean / sigma_gmean) * rho
+    Beta = (sigma_mean / sigma_gmean) * rho
     payoffs = np.zeros(reps)
 
     # Repeat monte carlo for #reps times
@@ -554,7 +554,7 @@ def control_variance_asian(T=1, S0=100, K=99, r=0.06, sigma=0.2, steps=100, reps
         C_b = max(gmean_price - mc.K, 0)
 
         # Apply control variance with analytical option price
-        payoffs[rep] = C_a - B * (C_b - C_B)
+        payoffs[rep] = C_a - Beta * (C_b - C_B)
 
     # Option price is equal to the mean of the payoffs
     option_price = np.mean(payoffs)
