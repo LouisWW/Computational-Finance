@@ -24,6 +24,7 @@ import pickle
 
 
 
+
 def plot_wiener_process(T, S0, K, r, sigma, steps,save_plot=False):
     """
     :param T:  Period
@@ -505,6 +506,59 @@ def monte_carlo_asian(T, S0, K, r, sigma, steps, period=False, reps=100):
 
     # calculate the price by finding the mean of the payoffs
     option_price = np.mean(payoffs)
+    return option_price, payoffs
+
+def control_variance_asian(T=1, S0=100, K=99, r=0.06, sigma=0.2, steps=100, reps=10000):
+    '''
+    Control variance on the Asian option price, taking geometric averaging as control since we have the
+    Black-Scholes price of it. We pridict using a monte-carlo method.
+    :param T: time in years
+    :param S0: stock price at time = 0
+    :param K: sttrike price
+    :param r: risk free rate
+    :param sigma: volatility
+    :param steps: amount of intervals in time
+    :param reps: amount of repetitions of the monte carlo progress
+    :return: option price and list of payoffs
+    '''
+    # Initialize classes
+    mc = monte_carlo(steps, T, S0, sigma, r, K)
+    bs = BlackScholes(T, S0, K, r, sigma, steps)
+
+    # Estimate Rho and get analytical option price
+    N = steps
+    rho = 0.99
+    C_B = bs.asian_call_price()
+
+    # Calculate B from different sigmas
+    sigma_mean = sigma / np.sqrt(3)
+    sigma_gmean =  sigma * np.sqrt(((N + 1) * (2 * N + 1)) / (6 * N ** 2))
+
+    B = (sigma_mean / sigma_gmean) * rho
+    payoffs = np.zeros(reps)
+
+    # Repeat monte carlo for #reps times
+    for rep in range(reps) :
+        # Create wiener process
+        mc.wiener_method()
+
+        # Get price path
+        prices = mc.wiener_price_path
+
+        # Calculate both geometric mean and normal mean from same price path (Seed)
+        mean_price = (sum(prices) / len(prices))
+        gmean_price = stats.gmean(prices)
+
+        # Calculate payoff of individual methods
+        C_a = max(mean_price - mc.K, 0)
+        C_b = max(gmean_price - mc.K, 0)
+
+        # Apply control variance with analytical option price
+        payoffs[rep] = C_a - B * (C_b - C_B)
+
+    # Option price is equal to the mean of the payoffs
+    option_price = np.mean(payoffs)
+
     return option_price, payoffs
 
 ########################################################################################################################
