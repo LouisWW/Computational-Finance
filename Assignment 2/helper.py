@@ -297,6 +297,7 @@ def diff_iter_bump_and_revalue(
     deltas = np.zeros((diff_iter, diff_eps))
     bs_deltas = np.zeros((diff_iter, diff_eps))
     errors = np.zeros((diff_iter, diff_eps))
+    std_deltas = np.zeros((diff_iter, diff_eps))
 
     # Apply bump and revalue method for each number of iterations
     for i, iteration in enumerate(iterations):
@@ -304,27 +305,23 @@ def diff_iter_bump_and_revalue(
                     epsilons=epsilons, set_seed=set_seed, reps=iteration,
                     full_output=full_output, option_type=option_type, contract=contract
                 )
-        deltas[i, :], bs_deltas[i, :], errors[i, :] = result
+        deltas[i, :], bs_deltas[i, :], errors[i, :], std_deltas[i, :] = result
 
     # if required output is saved (random seed)
     if save_output and set_seed:
         name = os.path.join(
             "Data", f"{option_type}-{contract}_bump_and_revalue_fixedseed_"
             )
-        np.save(name + f"deltas_K={K}_sigma={sigma}.npy", deltas)
-        np.save(name + f"BSdeltas_K={K}_sigma={sigma}.npy", bs_deltas)
-        np.save(name + f"errors_K={K}_sigma={sigma}.npy", errors)
+        save_output_ex2(name, K, sigma, deltas, bs_deltas, errors, std_deltas)
 
     # if required output is saved (fixed seed)
     elif save_output and not set_seed:
         name = os.path.join(
-            "Data", f"{option_type}-{contract}_bump_and_revalue_randomseed"
+            "Data", f"{option_type}-{contract}_bump_and_revalue_randomseed_"
             )
-        np.save(name + f"deltas_K={K}_sigma={sigma}.npy", deltas)
-        np.save(name + f"BSdeltas_K={K}_sigma={sigma}.npy", bs_deltas)
-        np.save(name + f"errors_K={K}_sigma={sigma}.npy", errors)
+        save_output_ex2(name, K, sigma, deltas, bs_deltas, errors, std_deltas)
 
-    return deltas, bs_deltas, errors
+    return deltas, bs_deltas, errors, std_deltas
 
 def bump_revalue_vectorized(
     T, S0, K, r, sigma, steps, epsilons=[0.5],
@@ -338,6 +335,7 @@ def bump_revalue_vectorized(
     diff_eps = len(epsilons)
     deltas = np.zeros(diff_eps)
     bs_deltas = np.zeros(diff_eps)
+    std_deltas = np.zeros(diff_eps)
 
     # Start MC simulation for each bump
     for i, eps in enumerate(epsilons):
@@ -355,29 +353,36 @@ def bump_revalue_vectorized(
                         )
 
         # Determine prices and delta hedging depending at spot time
-        results = option_prices_spot(
+        results = payoff_and_hedge_options(
             option_type, contract, S_rev,
             S_bump, S0_eps, K, r, sigma,
             T, bs_deltas, i
         )
         prices_revalue, prices_bump, bs_deltas = results
 
-        # Mean option prices bump and revalue
+        # Mean and variance option prices bump and revalue
         mean_revalue = prices_revalue.mean()
         mean_bump = prices_bump.mean()
+        var_bump = prices_bump.var()
+        var_revalue = prices_revalue.var()
 
-        # Determine MC delta
-        deltas[i] = (mean_bump - mean_revalue) / eps
+        # Determine MC delta and its variance
+        discount = math.exp(-r * T)
+        deltas[i] = (discount * (mean_bump - mean_revalue)) / eps
+        cov_br = np.cov(prices_bump, prices_revalue)[0, 1]
+        var_delta = (1 / (eps * eps)) * (var_bump + var_revalue - 2 * cov_br)
+        print(var_bump, var_revalue, cov_br, var_delta)
+        print(np.cov(prices_bump, prices_revalue))
+        std_deltas[i] = math.sqrt(var_delta)
 
     # Determine relative (percent) errors
-    # errors = np.abs((bs_deltas - deltas) / deltas) * 100
     errors = np.abs(1 - (deltas / bs_deltas))
 
     # Checks if full output is required
     if full_output:
-        return deltas, bs_deltas, errors, prices_revalue, prices_bump
+        return deltas, bs_deltas, errors, std_deltas, prices_revalue, prices_bump
 
-    return deltas, bs_deltas, errors
+    return deltas, bs_deltas, errors, std_deltas
 
 def stock_prices_bump_revalue(set_seed, reps, mc_revalue, mc_bump, i):
     """
@@ -403,21 +408,20 @@ def stock_prices_bump_revalue(set_seed, reps, mc_revalue, mc_bump, i):
 
     return S_rev, S_bump
 
-def option_prices_spot(
+def payoff_and_hedge_options(
     option_type, contract, S_rev, S_bump, S0_eps, K, r, sigma, T, bs_deltas, i
     ):
     """
-    Determine prices and delta hedging at spot time depending on option type
+    Determine payoffs at maturity and (theoretical) delta hedging at spot time
     """
-    prices_revalue, prices_bump, discount = 0, 0, math.exp(-r * T)
+    prices_revalue, prices_bump = 0, 0
 
     # European put option
     if option_type == "regular" and contract == "put":
 
-        print(S_rev)
         # Determine option price
-        prices_revalue = discount * np.where(K - S_rev > 0, K - S_rev, 0)
-        prices_bump = discount * np.where(K - S_bump > 0, K - S_bump, 0)
+        prices_revalue = np.where(K - S_rev > 0, K - S_rev, 0)
+        prices_bump = np.where(K - S_bump > 0, K - S_bump, 0)
 
         # Theoretical delta
         d1 = (np.log(S0_eps / K) + (r + 0.5 * sigma ** 2)
@@ -428,8 +432,8 @@ def option_prices_spot(
     elif option_type == "digital" and contract == "call":
 
         # Determine option price
-        prices_revalue = discount * np.where(S_rev - K > 0, 1, 0)
-        prices_bump = discount * np.where(S_bump - K > 0, 1, 0)
+        prices_revalue = np.where(S_rev - K > 0, 1, 0)
+        prices_bump = np.where(S_bump - K > 0, 1, 0)
 
         # Theoretical delta
         d2 = (np.log(S0_eps / K) + (r - 0.5 * sigma ** 2)
@@ -441,37 +445,68 @@ def option_prices_spot(
     return prices_revalue, prices_bump, bs_deltas
 
 
-def LR_method(T, S0, K, r, sigma, steps, set_seed=[], reps=[100]):
+def LR_method(T, S0, K, r, sigma, steps, set_seed=[], reps=[100], 
+option_type="digital", contract="call", save_output=False):
     """
     ONLY FOR DIGITAL OPTION.
     """
 
+    # Initialize variables
     deltas = np.zeros(len(reps))
+    std_deltas = np.zeros(len(reps))
     discount = math.exp(-r * T)
     mc = monte_carlo(steps, T, S0, sigma, r, K)
+
+    # Start likelihood ratio method for a different amount of repititions
     for i, rep in enumerate(reps):
 
+        # If given, fix seed
         if set_seed:
             np.random.seed(set_seed[i])
 
+        # Generate random normally distrivuted numbers for given repitition
+        # determine stock prices and payoffs and calculate (average) deltas
         numbers = np.random.normal(size=rep)
         scores = numbers / (S0 * sigma * math.sqrt(T))
         S = mc.euler_method_vectorized(numbers)
         payoffs = np.where(S - K > 0, 1, 0)
         d = discount * payoffs * scores
         deltas[i] = d.mean()
+        std_deltas[i] = d.std()
 
     # Theoretical delta
+    bs_deltas = np.ones(len(reps))
     d2 = (np.log(S0 / K) + (r - 0.5 * sigma ** 2)
             * T) / (sigma * np.sqrt(T))
     num = discount * stats.norm.pdf(d2, 0.0, 1.0)
     den = sigma * S0 * math.sqrt(T)
-    bs_delta = num / den
+    bs_deltas = bs_deltas * num / den
 
     # Determine relative errors
-    errors = np.abs(1 - (deltas / bs_delta))
+    errors = np.abs(1 - (deltas / bs_deltas))
 
-    return deltas, bs_delta, errors
+    # Save output, if required
+    if save_output and set_seed:
+        name = os.path.join(
+            "Data", f"{option_type}-{contract}_LR_fixedseed_"
+        )
+        save_output_ex2(name, K, sigma, deltas, bs_deltas, errors, std_deltas)
+
+    elif save_output and not set_seed:
+        name = os.path.join(
+            "Data", f"{option_type}-{contract}_LR_randomseed_"
+        )
+        save_output_ex2(name, K, sigma, deltas, bs_deltas, errors, std_deltas)
+
+    return deltas, bs_deltas, errors, std_deltas
+
+def save_output_ex2(name, K, sigma, deltas, bs_deltas, errors, std_deltas):
+    """
+    """
+    np.save(name + f"deltas_K={K}_sigma={sigma}.npy", deltas)
+    np.save(name + f"BSdeltas_K={K}_sigma={sigma}.npy", bs_deltas)
+    np.save(name + f"errors_K={K}_sigma={sigma}.npy", errors)
+    np.save(name + f"deviations_K={K}_sigma={sigma}.npy", std_deltas)
 
 def monte_carlo_asian(T, S0, K, r, sigma, steps, period=False, reps=100):
     '''

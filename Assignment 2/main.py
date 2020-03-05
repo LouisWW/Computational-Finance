@@ -82,7 +82,7 @@ results = helper.LR_method(
     set_seed=set_seed,
     reps=reps
 )
-deltas, bs_delta, errors = results
+deltas, bs_delta, errors, variances = results
 print("Monte Carlo Deltas:")
 print(deltas.round(3))
 print("=================================================")
@@ -132,7 +132,7 @@ results = helper.diff_iter_bump_and_revalue(
     save_output=False
 )
 
-deltas, bs_deltas, errors = results
+deltas, bs_deltas, errors, variances = results
 print("Monte Carlo Deltas:")
 print(deltas.round(3))
 print("=================================================")
