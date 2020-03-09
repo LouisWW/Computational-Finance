@@ -19,8 +19,8 @@ Basic Option Valuation :
 - estimate the Standard error and accuracy
 '''
 
-# helper.plot_wiener_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=True)
-'''
+helper.plot_wiener_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=True)
+
 helper.diff_monte_carlo_process(
     T=1,
     S0=100,
@@ -28,8 +28,7 @@ helper.diff_monte_carlo_process(
     r=0.06,
     sigma=0.2,
     steps=365,
-    increments=50,
-    max_repetition=10000,
+    samples=[100,1000,10000,100000,1000000],
     save_plot=True)
 
 
@@ -54,12 +53,6 @@ helper.diff_sigma_monte_carlo_process(
     steps=365,
     repetition=10000,
     save_plot=True)
-
-'''
-#helper.milstein_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
-
-#helper.antithetic_monte_carlo_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=False)
-
 '''
 Estimation of Sensitivities in MC:
 -Compute bump-and-reveal mehtod
@@ -93,28 +86,28 @@ print("Relative Errors:")
 print(errors.round(3))
 print("=================================================")
 
-epsilons = [0.01, 0.02, 0.5]
-set_seed = []
+#epsilons = [0.01, 0.02, 0.5]
+#set_seed = []
 
-# epsilons = [0.01 * (x + 1) for x in range(5)]
-# set_seed = [10] * len(epsilons)
+epsilons = [0.01 * (x + 1) for x in range(5)]
+set_seed = [10] * len(epsilons)
 
 
-# results = helper.diff_iter_bump_and_revalue(
-#     T=1,
-#     S0=100,
-#     K=99,
-#     r=0.06,
-#     sigma=0.2,
-#     steps=365,
-#     epsilons=epsilons,
-#     set_seed=set_seed,
-#     iterations=[10000, 100000, 1000000, 10000000],
-#     full_output=False,
-#     option_type="regular",
-#     contract="put",
-#     save_output=False
-# )
+results = helper.diff_iter_bump_and_revalue(
+     T=1,
+     S0=100,
+     K=99,
+     r=0.06,
+     sigma=0.2,
+     steps=365,
+     epsilons=epsilons,
+     set_seed=set_seed,
+     iterations=[10000, 100000, 1000000, 10000000],
+     full_output=False,
+     option_type="regular",
+     contract="put",
+     save_output=False
+)
 
 results = helper.diff_iter_bump_and_revalue(
     T=1,

@@ -20,6 +20,7 @@ import tqdm
 from collections import defaultdict
 import multiprocessing
 from Binomial_tree import BinTreeOption, BlackScholes
+import tqdm
 import pickle
 
 
@@ -67,7 +68,7 @@ def worker_pay_off_euler_sim(object):
 
     return pay_off_array
 
-def diff_monte_carlo_process(T, S0, K, r, sigma, steps,increments,max_repetition,save_plot=False):
+def diff_monte_carlo_process(T, S0, K, r, sigma, steps,samples,save_plot=False):
     """
     :param T:  Period
     :param S0: Stock price at spot time
@@ -79,7 +80,8 @@ def diff_monte_carlo_process(T, S0, K, r, sigma, steps,increments,max_repetition
     :return:  returns a plot of a simulated stock movement
     """
 
-    different_mc_rep = np.linspace(10,max_repetition,increments,dtype=int)
+    different_mc_rep = samples
+    increments = len(samples)
 
     # mc_pricing will be a dict a list containing  tuples of (pricing and standard error)
     mc_pricing = defaultdict(list)
@@ -99,6 +101,12 @@ def diff_monte_carlo_process(T, S0, K, r, sigma, steps,increments,max_repetition
 
     bs = BlackScholes(T, S0, K, r, sigma)
     bs_solution=np.ones(increments)*bs.put_price()
+    print(bs.put_price())
+
+
+    for i in range(len(different_mc_rep)):
+        print("Number of samples: ", different_mc_rep[i]," Mean :", mc_pricing['euler_integration'][i][0], " Variance :", mc_pricing['euler_integration'][i][1])
+
 
     fig, axs = plt.subplots(2,figsize=(10, 7))
     axs[0].plot(different_mc_rep, [i[0] for i in mc_pricing['euler_integration']], color='gray', label='Monte Carlo')
@@ -282,9 +290,9 @@ def antithetic_monte_carlo_process(T, S0, K, r, sigma, steps,save_plot=False):
 
 
 def diff_iter_bump_and_revalue(
-    T, S0, K, r, sigma, steps, 
-    epsilons=[0.5], set_seed="random", seed_nr=10, iterations=[100], 
-    full_output=False, option_type="regular", contract="put", 
+    T, S0, K, r, sigma, steps,
+    epsilons=[0.5], set_seed="random", seed_nr=10, iterations=[100],
+    full_output=False, option_type="regular", contract="put",
     show_plot=False, save_plot=False, save_output=False
     ):
     """
@@ -326,7 +334,7 @@ def diff_iter_bump_and_revalue(
 
     if show_plot or save_plot:
         plot_bump_and_revalue(
-            epsilons, iterations, errors, std_deltas, option_type, 
+            epsilons, iterations, errors, std_deltas, option_type,
             contract, set_seed, show_plot, save_plot
             )
 
@@ -467,14 +475,14 @@ def payoff_and_hedge_options(
     return prices_revalue, prices_bump, bs_deltas
 
 def plot_bump_and_revalue(
-        epsilons, iterations, errors, std_deltas, 
+        epsilons, iterations, errors, std_deltas,
         option_type, contract, set_seed, show_plot=False, save_plot=False
     ):
     """
     """
 
     name_err = os.path.join(
-        "figures", 
+        "figures",
         "errors_{}_{}_bump_and_revalue_{}seed.pdf"
         .format(option_type, contract, set_seed)
         )
@@ -489,17 +497,17 @@ def plot_bump_and_revalue(
     fig = plt.figure()
     for i, iteration in enumerate(iterations):
         plt.plot(
-            epsilons, errors[i, :], color=colors[i], 
+            epsilons, errors[i, :], color=colors[i],
             linestyle=linestyles[i], label="N = {:.1e}".format(Decimal(str(iteration)))
             )
 
     plt.xlabel("Epsilons")
     plt.ylabel("Relative error")
     plt.yscale("log")
-    plt.title("Relative error delta bump-and-revalue method \n" + 
+    plt.title("Relative error delta bump-and-revalue method \n" +
             "({} seed, {} {})".format(set_seed, option_type, contract))
     plt.legend()
-    
+
     if show_plot:
         plt.show()
 
@@ -511,14 +519,14 @@ def plot_bump_and_revalue(
     fig = plt.figure()
     for i, iteration in enumerate(iterations):
         plt.plot(
-            epsilons, std_deltas[i, :], color=colors[i], 
+            epsilons, std_deltas[i, :], color=colors[i],
             linestyle=linestyles[i], label="N = {:.1e}".format(Decimal(str(iteration)))
             )
 
     plt.xlabel("Epsilons")
     plt.ylabel("Standard deviation")
     plt.yscale("log")
-    plt.title("Standard deviation delta with bump-and-revalue method\n" + 
+    plt.title("Standard deviation delta with bump-and-revalue method\n" +
             "({} seed, {} {})".format(set_seed, option_type, contract))
     plt.legend()
 
@@ -577,7 +585,7 @@ def LR_method(T, S0, K, r, sigma, steps, set_seed="random", seed_nr=10, reps=[10
 
     if show_plot or save_plot:
         plot_LR(
-            reps, errors, std_deltas, option_type, contract, 
+            reps, errors, std_deltas, option_type, contract,
             set_seed, show_plot, save_plot
             )
 
@@ -594,7 +602,7 @@ def plot_LR(iterations, errors, std_deltas, option_type, contract, set_seed, sho
     """
     """
     name =  os.path.join(
-        "figures", 
+        "figures",
         "results_{}_{}_LR_{}seed.pdf".format(option_type, contract, set_seed)
         )
 
@@ -666,7 +674,7 @@ def get_N_linestyles(N=5):
         linestyles.remove(style)
     styles = len(linestyles)
     return [linestyles[style % styles] for style in range(N)]
-    
+
 
 def monte_carlo_asian(T, S0, K, r, sigma, steps, period=False, reps=100):
     '''

@@ -11,6 +11,8 @@ Louis Weyland, Floris Fok and Julien Fer
 import numpy as np
 import math
 
+
+
 class monte_carlo:
     def __init__(self, steps, T, S0, sigma, r, K, market="EU", option_type="call"):
         self.steps = steps

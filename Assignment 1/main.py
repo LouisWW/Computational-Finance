@@ -31,7 +31,7 @@ parser.add_argument('-K', type=int,default=99, help='Strike price at the moment 
 parser.add_argument('-steps', type=int,default=365, help='Number of updates of the stock market over the year')
 parser.add_argument('-r', type=float,default=0.06, help='interest rate r (default : 0.06)')
 parser.add_argument('-s', type=float, default=0.2, help='volatility s (default : 0.2)')
-parser.add_argument('-option_type', type=str,default='call', help='option type EU or USA(default : EU)')
+parser.add_argument('-option_type', type=str,default='call', help='option type call or put (default : call)')
 parser.add_argument('-market', type=str,default='EU', help='option type EU or USA(default : EU)')
 parser.add_argument('-save_plot',default=False, help='return the plots (default : False)')
 parser.add_argument('-run_time',default=False, help='return the plots (default : False)')
