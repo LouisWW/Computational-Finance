@@ -381,13 +381,15 @@ def bump_revalue_vectorized(
         mean_bump = prices_bump.mean()
         var_bump = prices_bump.var()
         var_revalue = prices_revalue.var()
+        prod_prices = prices_bump * prices_revalue
+        ave_prod_prices = prod_prices.mean()
 
         # Determine MC delta and its variance
         deltas[i] = (discount * (mean_bump - mean_revalue)) / eps
-        var_delta = 0
-        if not seeds:
-            cov_br = np.cov(prices_bump, prices_revalue)[0, 1]
-            var_delta = (1 / (eps * eps)) * ((var_bump + var_revalue - 2 * cov_br) / reps)
+        # cov_br = np.cov(prices_bump, prices_revalue)[0, 1]
+        cov_prod = ave_prod_prices - mean_bump * mean_revalue
+        var_delta = (1 / (eps * eps)) * \
+            ((var_bump + var_revalue - 2 * cov_prod) / reps)
 
         # print("Var BUMP:", round(var_bump, 3))
         # print("Var REVALUE", round(var_revalue, 3))
@@ -552,7 +554,7 @@ def LR_method(T, S0, K, r, sigma, steps, set_seed="random", seed_nr=10, reps=[10
 
         # If given, fix seed
         if seeds:
-            np.random.seed(set_seed[i])
+            np.random.seed(seeds[i])
 
         # Generate random normally distrivuted numbers for given repitition
         # determine stock prices and payoffs and calculate (average) deltas
