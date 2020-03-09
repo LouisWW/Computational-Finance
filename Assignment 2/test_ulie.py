@@ -38,125 +38,87 @@ Estimation of Sensitivities in MC:
 - and point 2 use sophisticated method discussed in the lecture
 '''
 
-# epsilons = [0.01, 0.02, 0.5]
+T, S0, K, r, sigma, steps = 1, 100, 99, 0.06, 0.2, 365
 epsilons = [(x + 1) * 0.01 for x in range(50)]
-# set_seed = []
-
-# epsilons = [0.01 * (x + 1) for x in range(5)]
-set_seed = [10] * len(epsilons)
+# set_seed = "random"
+set_seed = "fixed"
+seed_nr = 10
+iterations = [1000, 10000, 100000, 1000000, 10000000]
+show_plot, save_plot, save_output = False, True, True
+diff_iter = len(iterations)
+eps_select = [0, 1, 4, 49]
 
 start = time.time()
 results = helper.diff_iter_bump_and_revalue(
-    T=1,
-    S0=100,
-    K=99,
-    r=0.06,
-    sigma=0.2,
-    steps=365,
+    T=T,
+    S0=S0,
+    K=K,
+    r=r,
+    sigma=sigma,
+    steps=steps,
     epsilons=epsilons, 
     set_seed=set_seed,
-    iterations=[1000, 10000, 100000, 1000000, 10000000],
-    full_output=False,
+    seed_nr=seed_nr,
+    iterations=iterations,
     option_type="regular",
-    contract="put", 
-    save_output=True
+    contract="put",
+    show_plot=show_plot,
+    save_plot=save_plot,
+    save_output=save_output
 )
 print("Bump and Revalue EU Put Option ran in {} minutes"
         .format(round((time.time() - start) / 60, 2)))
 
-
-deltas, bs_deltas, errors, deviations = results
-print("EU PUT OPTION (bump and revalue)")
-print("==================================================")
-print("Monte Carlo Deltas:")
-print(deltas.round(3))
-print("=================================================")
-print("Black Scholse Deltas:")
-print(bs_deltas.round(3))
-print("=================================================")
-print("Relative Errors:")
-print(errors.round(3))
-print("=================================================")
-print("=================================================")
-print("Standard Deviation Delta:")
-print(deviations.round(3))
-print("=================================================")
+# deltas, bs_deltas, errors, deviations = results
 
 start2 = time.time()
 results = helper.diff_iter_bump_and_revalue(
-    T=1,
-    S0=100,
-    K=99,
-    r=0.06,
-    sigma=0.2,
-    steps=365,
+    T=T,
+    S0=S0,
+    K=K,
+    r=r,
+    sigma=sigma,
+    steps=steps,
     epsilons=epsilons,
     set_seed=set_seed,
-    iterations=[1000, 10000, 100000, 1000000, 10000000],
-    full_output=False,
+    seed_nr=seed_nr,
+    iterations=iterations,
     option_type="digital",
     contract="call",
-    save_output=True
+    show_plot=show_plot,
+    save_plot=save_plot,
+    save_output=save_output
 )
 
 print("Bump and Revalue EU Digital Call Option ran in {} minutes"
       .format(round((time.time() - start2) / 60, 2)))
 
-deltas, bs_deltas, errors, deviations = results
-print("DIGITAL EU CALL OPTION (bump and revalue")
-print("==================================================")
-print("Monte Carlo Deltas:")
-print(deltas.round(3))
-print("=================================================")
-print("Black Scholse Deltas:")
-print(bs_deltas.round(3))
-print("=================================================")
-print("Relative Errors:")
-print(errors.round(3))
-print("=================================================")
-print("=================================================")
-print("Standard Deviation Delta:")
-print(deviations.round(3))
-print("=================================================")
-
-# set_seed = []
-reps = [1000, 10000, 100000, 1000000, 10000000]
-set_seed = [10] * len(reps)
+# deltas, bs_deltas, errors, deviations = results
 
 start3 = time.time()
 results = helper.LR_method(
-    T=1,
-    S0=100,
-    K=99,
-    r=0.06,
-    sigma=0.2,
-    steps=365,
+    T=T,
+    S0=S0,
+    K=K,
+    r=r,
+    sigma=sigma,
+    steps=steps,
     set_seed=set_seed,
-    reps=reps,
-    save_output=True
+    seed_nr=seed_nr,
+    reps=iterations,
+    show_plot=show_plot,
+    save_plot=save_plot,
+    save_output=save_output
 )
 
 print("LR method EU Digital Call Option ran in {} minutes"
       .format(round((time.time() - start3) / 60, 2)))
 
-deltas, bs_delta, errors, deviations = results
-print("DIGITAL EU CALL OPTION (LR method)")
-print("==================================================")
-print("Monte Carlo Deltas:")
-print(deltas.round(3))
-print("=================================================")
-print("Black Scholse Deltas:")
-print(bs_deltas.round(3))
-print("=================================================")
-print("Relative Errors:")
-print(errors.round(3))
-print("=================================================")
-print("Standard Deviation Delta:")
-print(deviations.round(3))
-print("=================================================")
+# deltas, bs_deltas, errors, deviations = results
 
 print("Entire script ran in {} minutes"
       .format(round((time.time() - start) / 60, 2)))
+
 
 '''
 Variance Reduction:

@@ -9,20 +9,18 @@ Louis Weyland, Floris Fok and Julien Fer
 import argparse
 import math
 import os
+from decimal import Decimal
 from monte_carlo import monte_carlo
 import matplotlib.pyplot as plt
+import matplotlib.lines as ls
+import colorsys
 import numpy as np
 import scipy.stats as stats
 import tqdm
 from collections import defaultdict
 import multiprocessing
 from Binomial_tree import BinTreeOption, BlackScholes
-import tqdm
 import pickle
-
-
-
-
 
 
 def plot_wiener_process(T, S0, K, r, sigma, steps,save_plot=False):
@@ -284,12 +282,27 @@ def antithetic_monte_carlo_process(T, S0, K, r, sigma, steps,save_plot=False):
 
 
 def diff_iter_bump_and_revalue(
-    T, S0, K, r, sigma, steps, epsilons=[0.5], set_seed=[],
-    iterations=[100], full_output=False,
-    option_type="regular", contract="put", save_output=False
+    T, S0, K, r, sigma, steps, 
+    epsilons=[0.5], set_seed="random", seed_nr=10, iterations=[100], 
+    full_output=False, option_type="regular", contract="put", 
+    show_plot=False, save_plot=False, save_output=False
     ):
     """
-    Applies bump and revalue for for different amount of iterations
+    Applies bump and revalue for for different amount of iterations.
+    :param T:  Maturity in years
+    :param S0: Stock price at spot time
+    :param K:  Strike price
+    :param r:  Risk-free interest rate (yearly rate)
+    :param sigma: Volatility
+    :param steps: Number of intermediate steps
+    :param epsilons: bump initial stock price
+    :param set_seed: random or fixed seed for the simulations
+    :param seed_nr: seed to use
+    :param iterations: list of number of MC simulations
+    :param option_type: option's type (regular or digital)
+    :param full_output: returns full output
+    :param save_plot:  to save the plot
+    :return:  returns a plot of a simulated stock movement
     """
 
     # Setup storage for results of the different MC simulations
@@ -299,33 +312,35 @@ def diff_iter_bump_and_revalue(
     errors = np.zeros((diff_iter, diff_eps))
     std_deltas = np.zeros((diff_iter, diff_eps))
 
+    seeds = []
+    if set_seed == "fixed":
+        seeds = [seed_nr for _ in range(diff_eps)]
+
     # Apply bump and revalue method for each number of iterations
     for i, iteration in enumerate(iterations):
         result = bump_revalue_vectorized(T, S0, K, r, sigma, steps,
-                    epsilons=epsilons, set_seed=set_seed, reps=iteration,
+                    epsilons=epsilons, seeds=seeds, reps=iteration,
                     full_output=full_output, option_type=option_type, contract=contract
                 )
         deltas[i, :], bs_deltas[i, :], errors[i, :], std_deltas[i, :] = result
 
-    # if required output is saved (random seed)
-    if save_output and set_seed:
-        name = os.path.join(
-            "Data", f"{option_type}-{contract}_bump_and_revalue_fixedseed_"
+    if show_plot or save_plot:
+        plot_bump_and_revalue(
+            epsilons, iterations, errors, std_deltas, option_type, 
+            contract, set_seed, show_plot, save_plot
             )
-        save_output_ex2(name, K, sigma, deltas, bs_deltas, errors, std_deltas)
 
-    # if required output is saved (fixed seed)
-    elif save_output and not set_seed:
+    # if required output is saved
+    if save_output:
         name = os.path.join(
-            "Data", f"{option_type}-{contract}_bump_and_revalue_randomseed_"
+            "Data", f"{option_type}-{contract}_bump_and_revalue_{set_seed}seed_"
             )
         save_output_ex2(name, K, sigma, deltas, bs_deltas, errors, std_deltas)
 
     return deltas, bs_deltas, errors, std_deltas
 
 def bump_revalue_vectorized(
-    T, S0, K, r, sigma, steps, epsilons=[0.5],
-    set_seed=[], reps=100, full_output=False, option_type="regular", contract="put"
+    T, S0, K, r, sigma, steps, epsilons=[0.5], seeds=[], reps=100, full_output=False, option_type="regular", contract="put"
 ):
     """
     Applies bump and revalue method to determine the delta at spot time
@@ -336,6 +351,7 @@ def bump_revalue_vectorized(
     deltas = np.zeros(diff_eps)
     bs_deltas = np.zeros(diff_eps)
     std_deltas = np.zeros(diff_eps)
+    discount = math.exp(-r * T)
 
     # Start MC simulation for each bump
     for i, eps in enumerate(epsilons):
@@ -349,14 +365,14 @@ def bump_revalue_vectorized(
 
         # Determine stock prices at maturity
         S_rev, S_bump = stock_prices_bump_revalue(
-                            set_seed, reps, mc_revalue, mc_bump, i
+                            seeds, reps, mc_revalue, mc_bump, i
                         )
 
         # Determine prices and delta hedging depending at spot time
         results = payoff_and_hedge_options(
             option_type, contract, S_rev,
             S_bump, S0_eps, K, r, sigma,
-            T, bs_deltas, i
+            T, bs_deltas, discount, i
         )
         prices_revalue, prices_bump, bs_deltas = results
 
@@ -367,12 +383,18 @@ def bump_revalue_vectorized(
         var_revalue = prices_revalue.var()
 
         # Determine MC delta and its variance
-        discount = math.exp(-r * T)
         deltas[i] = (discount * (mean_bump - mean_revalue)) / eps
-        cov_br = np.cov(prices_bump, prices_revalue)[0, 1]
-        var_delta = (1 / (eps * eps)) * (var_bump + var_revalue - 2 * cov_br)
-        print(var_bump, var_revalue, cov_br, var_delta)
-        print(np.cov(prices_bump, prices_revalue))
+        var_delta = 0
+        if not seeds:
+            cov_br = np.cov(prices_bump, prices_revalue)[0, 1]
+            var_delta = (1 / (eps * eps)) * ((var_bump + var_revalue - 2 * cov_br) / reps)
+
+        # print("Var BUMP:", round(var_bump, 3))
+        # print("Var REVALUE", round(var_revalue, 3))
+        # print("COVARIANCE:", round(cov_br, 3))
+        # print("Var DELTA:", round(var_delta, 3))
+        # print("========================================================")
+
         std_deltas[i] = math.sqrt(var_delta)
 
     # Determine relative (percent) errors
@@ -384,13 +406,13 @@ def bump_revalue_vectorized(
 
     return deltas, bs_deltas, errors, std_deltas
 
-def stock_prices_bump_revalue(set_seed, reps, mc_revalue, mc_bump, i):
+def stock_prices_bump_revalue(seeds, reps, mc_revalue, mc_bump, i):
     """
     """
     # Set seed (if given) and generate similar sequence for bump and revalue
     S_rev, S_bump = None, None
-    if set_seed:
-        np.random.seed(set_seed[i])
+    if seeds:
+        np.random.seed(seeds[i])
         numbers = np.random.normal(size=reps)
 
         # Euler method
@@ -409,7 +431,7 @@ def stock_prices_bump_revalue(set_seed, reps, mc_revalue, mc_bump, i):
     return S_rev, S_bump
 
 def payoff_and_hedge_options(
-    option_type, contract, S_rev, S_bump, S0_eps, K, r, sigma, T, bs_deltas, i
+    option_type, contract, S_rev, S_bump, S0_eps, K, r, sigma, T, bs_deltas, discount, i
     ):
     """
     Determine payoffs at maturity and (theoretical) delta hedging at spot time
@@ -444,24 +466,92 @@ def payoff_and_hedge_options(
 
     return prices_revalue, prices_bump, bs_deltas
 
+def plot_bump_and_revalue(
+        epsilons, iterations, errors, std_deltas, 
+        option_type, contract, set_seed, show_plot=False, save_plot=False
+    ):
+    """
+    """
 
-def LR_method(T, S0, K, r, sigma, steps, set_seed=[], reps=[100], 
-option_type="digital", contract="call", save_output=False):
+    name_err = os.path.join(
+        "figures", 
+        "errors_{}_{}_bump_and_revalue_{}seed.pdf"
+        .format(option_type, contract, set_seed)
+        )
+    name_std = os.path.join(
+        "figures",
+        "stddevs_{}_{}_bump_and_revalue_{}seed.pdf"
+        .format(option_type, contract, set_seed)
+    )
+    diff_iter, diff_eps = len(iterations), len(epsilons)
+    colors, linestyles = get_N_HexCol(diff_iter), get_N_linestyles(diff_iter)
+
+    fig = plt.figure()
+    for i, iteration in enumerate(iterations):
+        plt.plot(
+            epsilons, errors[i, :], color=colors[i], 
+            linestyle=linestyles[i], label="N = {:.1e}".format(Decimal(str(iteration)))
+            )
+
+    plt.xlabel("Epsilons")
+    plt.ylabel("Relative error")
+    plt.yscale("log")
+    plt.title("Relative error delta bump-and-revalue method \n" + 
+            "({} seed, {} {})".format(set_seed, option_type, contract))
+    plt.legend()
+    
+    if show_plot:
+        plt.show()
+
+    if save_plot:
+        plt.savefig(name_err, dpi=300)
+
+    plt.close()
+
+    fig = plt.figure()
+    for i, iteration in enumerate(iterations):
+        plt.plot(
+            epsilons, std_deltas[i, :], color=colors[i], 
+            linestyle=linestyles[i], label="N = {:.1e}".format(Decimal(str(iteration)))
+            )
+
+    plt.xlabel("Epsilons")
+    plt.ylabel("Standard deviation")
+    plt.yscale("log")
+    plt.title("Standard deviation delta with bump-and-revalue method\n" + 
+            "({} seed, {} {})".format(set_seed, option_type, contract))
+    plt.legend()
+
+    if show_plot:
+        plt.show()
+
+    if save_plot:
+        plt.savefig(name_std, dpi=300)
+
+    plt.close()
+
+
+def LR_method(T, S0, K, r, sigma, steps, set_seed="random", seed_nr=10, reps=[100], option_type="digital", contract="call", show_plot=False, save_plot=False, save_output=False):
     """
     ONLY FOR DIGITAL OPTION.
     """
 
     # Initialize variables
-    deltas = np.zeros(len(reps))
-    std_deltas = np.zeros(len(reps))
+    diff_reps = len(reps)
+    deltas = np.zeros(diff_reps)
+    std_deltas = np.zeros(diff_reps)
     discount = math.exp(-r * T)
     mc = monte_carlo(steps, T, S0, sigma, r, K)
+
+    seeds = []
+    if set_seed == "fixed":
+        seeds = [seed_nr for _ in range(diff_reps)]
 
     # Start likelihood ratio method for a different amount of repititions
     for i, rep in enumerate(reps):
 
         # If given, fix seed
-        if set_seed:
+        if seeds:
             np.random.seed(set_seed[i])
 
         # Generate random normally distrivuted numbers for given repitition
@@ -472,10 +562,10 @@ option_type="digital", contract="call", save_output=False):
         payoffs = np.where(S - K > 0, 1, 0)
         d = discount * payoffs * scores
         deltas[i] = d.mean()
-        std_deltas[i] = d.std()
+        std_deltas[i] = payoffs.std() / math.sqrt(rep)
 
     # Theoretical delta
-    bs_deltas = np.ones(len(reps))
+    bs_deltas = np.ones(diff_reps)
     d2 = (np.log(S0 / K) + (r - 0.5 * sigma ** 2)
             * T) / (sigma * np.sqrt(T))
     num = discount * stats.norm.pdf(d2, 0.0, 1.0)
@@ -485,20 +575,66 @@ option_type="digital", contract="call", save_output=False):
     # Determine relative errors
     errors = np.abs(1 - (deltas / bs_deltas))
 
-    # Save output, if required
-    if save_output and set_seed:
-        name = os.path.join(
-            "Data", f"{option_type}-{contract}_LR_fixedseed_"
-        )
-        save_output_ex2(name, K, sigma, deltas, bs_deltas, errors, std_deltas)
+    if show_plot or save_plot:
+        plot_LR(
+            reps, errors, std_deltas, option_type, contract, 
+            set_seed, show_plot, save_plot
+            )
 
-    elif save_output and not set_seed:
+    # Save output, if required
+    if save_output:
         name = os.path.join(
-            "Data", f"{option_type}-{contract}_LR_randomseed_"
+            "Data", f"{option_type}-{contract}_LR_{set_seed}seed_"
         )
         save_output_ex2(name, K, sigma, deltas, bs_deltas, errors, std_deltas)
 
     return deltas, bs_deltas, errors, std_deltas
+
+def plot_LR(iterations, errors, std_deltas, option_type, contract, set_seed, show_plot=False, save_plot=False):
+    """
+    """
+    name =  os.path.join(
+        "figures", 
+        "results_{}_{}_LR_{}seed.pdf".format(option_type, contract, set_seed)
+        )
+
+    styles = get_N_linestyles(2)
+    fig, ax1 = plt.subplots()
+
+    color = "tab:red"
+    ax1.set_xlabel("Simulations")
+    ax1.set_ylabel("Relative error", color=color)
+    ax1.plot(iterations, errors, color=color, linestyle=styles[0], label="error")
+    ax1.tick_params(axis='y', labelcolor=color)
+    ax1.set_yscale("log")
+    ax1.set_xscale("log")
+    ax1.legend
+
+    # Add second plot to figure with shared x axis
+    ax2 = ax1.twinx()
+    color = "tab:blue"
+    ax2.set_ylabel("Standard deviation", color=color)
+    ax2.plot(iterations, std_deltas, color=color, linestyle=styles[1], label="std. dev")
+    ax2.tick_params(axis='y', labelcolor=color)
+    ax2.set_yscale("log")
+
+    plt.title("Relative error and standard deviation delta with LR method\n({} seed, {} {})".format(set_seed, option_type, contract))
+
+    # Ask matplotlib for the plotted objects and their labels
+    lines, labels = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax2.legend(lines + lines2, labels + labels2)
+
+    # Otherwise the right y-label is slightly clipped
+    fig.tight_layout()
+
+    if show_plot:
+        plt.show()
+
+    if save_plot:
+        plt.savefig(name, dpi=300)
+
+    plt.close()
 
 def save_output_ex2(name, K, sigma, deltas, bs_deltas, errors, std_deltas):
     """
@@ -507,6 +643,30 @@ def save_output_ex2(name, K, sigma, deltas, bs_deltas, errors, std_deltas):
     np.save(name + f"BSdeltas_K={K}_sigma={sigma}.npy", bs_deltas)
     np.save(name + f"errors_K={K}_sigma={sigma}.npy", errors)
     np.save(name + f"deviations_K={K}_sigma={sigma}.npy", std_deltas)
+
+
+def get_N_HexCol(N=5):
+    """
+    Generate N distinct colors with help of hsv color scheme.
+    https://stackoverflow.com/questions/876853/generating-color-ranges-in-python
+    """
+    HSV_tuples = [(x / N, 0.5, 0.5) for x in range(N)]
+    hex_out = []
+    for rgb in HSV_tuples:
+        rgb = map(lambda x: int(x * 255), colorsys.hsv_to_rgb(*rgb))
+        hex_out.append('#%02x%02x%02x' % tuple(rgb))
+    return hex_out
+
+def get_N_linestyles(N=5):
+    """
+    Generate N different linestyles. Note that similar linestyles appear but if used together with the function get_N_HexCol we yield N colors and linestyles.
+    """
+    linestyles = list(ls.lineStyles.keys())
+    for style in ["", " ", "None"]:
+        linestyles.remove(style)
+    styles = len(linestyles)
+    return [linestyles[style % styles] for style in range(N)]
+    
 
 def monte_carlo_asian(T, S0, K, r, sigma, steps, period=False, reps=100):
     '''
