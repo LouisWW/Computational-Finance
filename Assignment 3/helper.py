@@ -11,8 +11,11 @@ from FD_mesh import FdMesh
 
 
 # FD_mesh(S_max,dS,T_max,dT)
-Grid = FdMesh(5,1,10,1)
+Grid = FdMesh(0,1,10,1)
 
-print(Grid)
+
+Grid.tri_diag_matrix(3,4,5,6)
+
+
 
 
