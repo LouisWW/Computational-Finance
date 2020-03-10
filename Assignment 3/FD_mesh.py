@@ -20,6 +20,10 @@ class FD_mesh:
         # To make the grid from 0 to T_max/S_max
         self.grid = np.zeros((self.T_max+1,self.S_max+1))
 
+
+    def forward_approximation(self):
+        pass
+
     def __str__(self):
 
         self.str="\n\n Finite Difference mesh \n\n"
