@@ -7,11 +7,11 @@ This code was implemented by
 Louis Weyland, Floris Fok and Julien Fer
 """
 
-from FD_mesh import FD_mesh
+from FD_mesh import FdMesh
 
 
 # FD_mesh(S_max,dS,T_max,dT)
-Grid = FD_mesh(10,1,10,1)
+Grid = FdMesh(5,1,10,1)
 
 print(Grid)
 

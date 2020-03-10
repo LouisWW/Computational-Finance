@@ -9,16 +9,18 @@ Louis Weyland, Floris Fok and Julien Fer
 
 import numpy as np
 
-class FD_mesh:
 
-    def __init__(self, S_max,dS,T_max,dT):
-        self.S_max = S_max
-        self.dS = dS
-        self.T_max = T_max
-        self.dT = dT
+class FdMesh:
+
+    def __init__(self, s_max, ds, t_max, dt):
+        self.s_max = s_max
+        self.ds = ds
+        self.t_max = t_max
+        self.dt = dt
 
         # To make the grid from 0 to T_max/S_max
-        self.grid = np.zeros((self.T_max+1,self.S_max+1))
+        self.grid = np.zeros((self.t_max+1,self.s_max+1))
+        self.grid[0][0]=13
 
 
     def forward_approximation(self):
@@ -27,10 +29,11 @@ class FD_mesh:
     def __str__(self):
 
         self.str="\n\n Finite Difference mesh \n\n"
-        for i in range(self.S_max):
-            for j in range(self.T_max):
+        # To make sure the coordinate (0,0) is at the bottom left
+        for i in range(self.grid.shape[1]-1,-1,-1):
+            for j in range(self.grid.shape[0]):
 
-                self.str += str(self.grid[i][j])
+                self.str += str(self.grid[j][i])
                 self.str += "  "
             self.str += "\n"
 
