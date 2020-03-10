@@ -20,7 +20,6 @@ class FdMesh:
 
         # To make the grid from 0 to T_max/S_max
         self.grid = np.zeros((self.t_max+1,self.s_max+1))
-        self.grid[0][0]=13
 
 
     def forward_approximation(self):
