@@ -66,8 +66,8 @@ class FdMesh:
         '''Forward approximation using the matrixes'''
         # Get old values and calculate new ones
         V_n = self.grid[:, j - 1]
-        deltas = self.dt * (np.dot(V_n, self.A)+self.K)
-        V = V_n + deltas
+        deltas = self.dt * (np.dot(V_n, self.A))
+        V = V_n + (deltas + self.K)
 
         # Save new values and delta
         self.grid[:, j] = V
@@ -84,8 +84,6 @@ class FdMesh:
         # show results
         print("Final")
         print(pd.DataFrame(self.grid))
-
-
 
 
     def first_derivitive_space(self, i, j):
