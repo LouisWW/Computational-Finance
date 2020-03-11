@@ -14,6 +14,7 @@ from FD_mesh import FdMesh
 Grid = FdMesh(80, 120, 5, 1, 0.2)
 Grid.run()
 
+
 # first = [{'value': -1, 'offset': 1}, {'value': 1, 'offset': -1}]
 # second = [{'value': 2, 'offset': 0}, {'value': 1, 'offset': -1}, {'value': 1, 'offset': 1}]
 #

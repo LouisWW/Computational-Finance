@@ -13,9 +13,11 @@ import pandas as pd
 
 class FdMesh:
 
-    def __init__(self, s_min, s_max, ds, t_max, dt):
+    def __init__(self, s_min, s_max, ds, t_max, dt, r=0.06, sigma=0.2):
         assert s_max !=0 , "s_max needs to be greater than 0 !!"
 
+        self.sigma =sigma
+        self.r = r
         self.s_max = s_max
         self.s_min = s_min
         self.ds = ds
@@ -27,14 +29,22 @@ class FdMesh:
 
         # To make the grid from 0 to T_max/S_max
         self.grid = np.zeros((self.n_steps_s, self.n_steps_t))
+        self.delta = np.zeros((self.n_steps_s, self.n_steps_t))
         self.A = np.zeros((self.n_steps_s, self.n_steps_s))
         self.K = np.zeros(self.n_steps_s)
 
     def initialize_FTCS(self):
         first = [{'value' : -1, 'offset' : 1}, {'value' : 1, 'offset' : -1}]
-        self.A = self.tri_diag_matrix_func(0, 0, 0, 0, first, True)
+        second = [{'value': 2, 'offset': 0}, {'value': 1, 'offset': -1}, {'value': 1, 'offset': 1}]
 
-        self.K[-1] = 0
+        extra = np.zeros(self.n_steps_s)
+        extra[-1] = 0
+
+        part1 = self.tri_diag_matrix_func(0, 0, 0, 0, first, printing=True)  * (1 / (self.ds * 2)) + extra
+        part2 = self.tri_diag_matrix_func(0, 0, 2, -2, second, printing=True)  * (1 / (self.ds ** 2)) + extra
+
+        # self.K += np.exp(-self.r)
+        self.A = (self.r - ((self.sigma ** 2) / 2)) * part1 + ((self.sigma ** 2) / 2) * part2 - self.K
 
         self.grid[:, 0] = np.arange(self.s_min, self.s_max, self.ds)[::-1]
 
@@ -45,8 +55,11 @@ class FdMesh:
 
     def forward_approximation(self, j):
         V_n = self.grid[:, j - 1]
-        V = V_n + self.dt * ((np.dot(V_n, self.A)) * (1 / (self.ds * 2)) + self.K)
+        deltas = self.dt * (np.dot(V_n, self.A))
+        V = V_n + (deltas + self.K)
+
         self.grid[:, j] = V
+        self.delta[:, j] = deltas
 
     def run(self):
         self.initialize_FTCS()
