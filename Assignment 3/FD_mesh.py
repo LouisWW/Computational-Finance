@@ -66,8 +66,8 @@ class FdMesh:
         '''Forward approximation using the matrixes'''
         # Get old values and calculate new ones
         V_n = self.grid[:, j - 1]
-        deltas = self.dt * (np.dot(V_n, self.A))
-        V = V_n + (deltas + self.K)
+        deltas = np.dot(V_n, self.A)
+        V = V_n + self.dt * (deltas + self.K)
 
         # Save new values and delta
         self.grid[:, j] = V
