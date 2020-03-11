@@ -37,17 +37,17 @@ class FdMesh:
         first = [{'value': -1, 'offset': 1}, {'value': 1, 'offset': -1}]
         second = [{'value': 2, 'offset': 0}, {'value': 1, 'offset': -1}, {'value': 1, 'offset': 1}]
 
-        # Extra term for boundarie in first order matrix approx
+        # Extra term for boundary in first order matrix approx
         extra1 = np.zeros(self.n_steps_s)
         extra1[-1] = np.exp(self.t_max)
 
-        # Extra term for boundarie in second order matrix approx
+        # Extra term for boundary in second order matrix approx
         extra2 = np.zeros(self.n_steps_s)
         extra2[-1] = np.exp(self.t_max) * (2/self.dt)
 
         # second and first order approximations in  matrix form with boundaries given
-        part1 = self.tri_diag_matrix_func(0, 0, 0, 0, first, printing=True)  * (1 / (self.ds * 2)) + extra1
-        part2 = self.tri_diag_matrix_func(0, 0, 2, -2, second, printing=True)  * (1 / (self.ds ** 2)) + extra2
+        part1 = self.tri_diag_matrix_func(0, 0, 0, 0, first, printing=True) * (1 / (self.ds * 2)) + extra1
+        part2 = self.tri_diag_matrix_func(0, 0, 2, -2, second, printing=True) * (1 / (self.ds ** 2)) + extra2
 
         # K- term, interest and the A matrix price movement
         self.K += np.exp(self.r)
@@ -66,8 +66,8 @@ class FdMesh:
         '''Forward approximation using the matrixes'''
         # Get old values and calculate new ones
         V_n = self.grid[:, j - 1]
-        deltas = self.dt * (np.dot(V_n, self.A))
-        V = V_n + (deltas + self.K)
+        deltas = self.dt * (np.dot(V_n, self.A)+self.K)
+        V = V_n + deltas
 
         # Save new values and delta
         self.grid[:, j] = V
@@ -84,6 +84,8 @@ class FdMesh:
         # show results
         print("Final")
         print(pd.DataFrame(self.grid))
+
+
 
 
     def first_derivitive_space(self, i, j):
@@ -103,13 +105,13 @@ class FdMesh:
         # initialize
         tri_diag_matrix = np.zeros((self.n_steps_s, self.n_steps_s))
 
-        # add offset with correct values over the given diaganol
+        # add offset with correct values over the given diagonal
         for set in offsets:
             array_len = (tri_diag_matrix.shape[1] - abs(set['offset']))
             tri_diag_matrix += np.diag([set['value']] * array_len, set['offset'])
 
         # the size of the matrix depends only on the number of discrete stock prices
-        tri_diag_matrix[0][0] =k1
+        tri_diag_matrix[0][0] = k1
         tri_diag_matrix[0][1] = k2
         tri_diag_matrix[-1][-2] = k3
         tri_diag_matrix[-1][-1] = k4
@@ -127,10 +129,10 @@ class FdMesh:
 
         self.str="\n\n Finite Difference mesh \n\n"
         # To make sure the coordinate (0,0) is at the bottom left
-        for i in range(self.grid.shape[1]-1,-1,-1):
-            for j in range(self.grid.shape[0]):
+        for i in range(self.grid.shape[0]-1,-1,-1):
+            for j in range(self.grid.shape[1]):
 
-                self.str += str(self.grid[j][i])
+                self.str += str(self.grid[i][j])
                 self.str += "  "
             self.str += "\n"
 
