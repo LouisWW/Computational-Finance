@@ -8,6 +8,7 @@ Louis Weyland, Floris Fok and Julien Fer
 """
 
 import numpy as np
+import pandas as pd
 
 
 class FdMesh:
@@ -20,37 +21,44 @@ class FdMesh:
         self.dt = dt
 
         # To make the grid from 0 to T_max/S_max
-        self.grid = np.zeros((self.t_max+1,self.s_max+1))
-
+        self.grid = np.zeros((int((self.t_max + 1) / dt), int((self.s_max + 1) / ds)))
 
     def forward_approximation(self):
         pass
 
-    def tri_diag_matrix(self,k1,k2,k3,k4):
+    def first_derivitive_space(self, i, j):
+        """Forward approximation of first derivative with respect to space:"""
+        return (self.grid[i][j + 1] - self.grid[i][j - 1]) / (2 * self.ds)
+
+    def first_derivitive_time(self, i, j):
+        """Forward approximation of first derivative with respect to space:"""
+        return (self.grid[i + 1][j] - self.grid[i - 1][j]) / (2 * self.ds)
+
+    def second_derivitive_space(self, i, j):
+        """central approximation of second derivative with respect to space:"""
+        return (self.grid[i][j + 1] - self.grid[i][j] + self.grid[i][j - 1]) / (self.ds ** 2)
+
+    def tri_diag_matrix_func(self, k1, k2, k3, k4, offsets, printing=False):
+
+        # initialize
+        tri_diag_matrix = np.zeros((self.grid.shape[1], self.grid.shape[1]))
+
+        # add offset with correct values over the given diaganol
+        for set in offsets:
+            array_len = (tri_diag_matrix.shape[1] - abs(set['offset']))
+            tri_diag_matrix += np.diag([set['value']] * array_len, set['offset'])
+
         # the size of the matrix depends only on the number of discrete stock prices
-        self.tri_diag_matrix=np.zeros((self.grid.shape[1],self.grid.shape[1]))
+        tri_diag_matrix[0][0] =k1
+        tri_diag_matrix[0][1] = k2
+        tri_diag_matrix[-1][-2] = k3
+        tri_diag_matrix[-1][-1] = k4
 
-        self.tri_diag_matrix[0][0] =k1
-        self.tri_diag_matrix[1][0] = k2
-        self.tri_diag_matrix[-2][-1] = k3
-        self.tri_diag_matrix[-1][-1] = k4
+        # For testing
+        if printing:
+            print(pd.DataFrame(tri_diag_matrix))
 
-        for i in range(0,self.tri_diag_matrix.shape[1]-2):
-            self.tri_diag_matrix[i][i+1]=1
-            self.tri_diag_matrix[i+2][i+1] = -1
-
-        # Can be deleted once it is defined as stable with all sizes of matrix
-        sstr =""
-        for i in range(self.grid.shape[1]):
-            for j in range(self.grid.shape[1]):
-
-                sstr += str(self.tri_diag_matrix[j][i])
-                sstr += "  "
-            sstr += "\n"
-
-        sstr += "\n\n\n\n"
-
-        print(sstr)
+        return tri_diag_matrix
 
     def __str__(self):
 
