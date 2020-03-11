@@ -37,14 +37,17 @@ class FdMesh:
         first = [{'value' : -1, 'offset' : 1}, {'value' : 1, 'offset' : -1}]
         second = [{'value': 2, 'offset': 0}, {'value': 1, 'offset': -1}, {'value': 1, 'offset': 1}]
 
-        extra = np.zeros(self.n_steps_s)
-        extra[-1] = 0
+        extra1 = np.zeros(self.n_steps_s)
+        extra1[-1] = np.exp(self.t_max)
 
-        part1 = self.tri_diag_matrix_func(0, 0, 0, 0, first, printing=True)  * (1 / (self.ds * 2)) + extra
-        part2 = self.tri_diag_matrix_func(0, 0, 2, -2, second, printing=True)  * (1 / (self.ds ** 2)) + extra
+        extra2 = np.zeros(self.n_steps_s)
+        extra2[-1] = np.exp(self.t_max) * (2/self.dt)
 
-        # self.K += np.exp(-self.r)
-        self.A = (self.r - ((self.sigma ** 2) / 2)) * part1 + ((self.sigma ** 2) / 2) * part2 - self.K
+        part1 = self.tri_diag_matrix_func(0, 0, 0, 0, first, printing=True)  * (1 / (self.ds * 2)) + extra1
+        part2 = self.tri_diag_matrix_func(0, 0, 2, -2, second, printing=True)  * (1 / (self.ds ** 2)) + extra2
+
+        self.K += np.exp(self.r)
+        self.A = (self.r - ((self.sigma ** 2) / 2)) * part1 + ((self.sigma ** 2) / 2) * part2
 
         self.grid[:, 0] = np.arange(self.s_min, self.s_max, self.ds)[::-1]
 
