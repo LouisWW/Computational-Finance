@@ -9,13 +9,100 @@ Louis Weyland, Floris Fok and Julien Fer
 
 import numpy as np
 import pandas as pd
+import scipy.stats as st
+import math
+
+
+class BlackScholes:
+    def __init__(self, T, S0, K, r, sigma, steps=1):
+        self.T = T
+        self.S0 = S0
+        self.K = K
+        self.r = r
+        self.sigma = sigma
+        self.steps = steps
+        self.dt = T / steps
+        self.price = S0
+        self.price_path = np.zeros(steps)
+
+        self.delta_list = None
+        self.x_hedge = None
+
+    def call_price(self, t=0):
+        """
+        """
+        d1 = (np.log(self.S0 / self.K) + (self.r + 0.5 * self.sigma ** 2)
+              * (self.T - t)) / (self.sigma * np.sqrt(self.T - t))
+        d2 = d1 - self.sigma * np.sqrt(self.T - t)
+
+        call = (self.S0 * st.norm.cdf(d1, 0.0, 1.0) - self.K *
+                np.exp(-self.r * self.T) * st.norm.cdf(d2, 0.0, 1.0))
+
+        return call
+
+    def put_price(self, t=0):
+        """
+        """
+        d1 = (np.log(self.S0 / self.K) + (self.r + 0.5 * self.sigma ** 2)
+              * (self.T - t)) / (self.sigma * np.sqrt(self.T - t))
+        d2 = d1 - self.sigma * np.sqrt(self.T - t)
+
+        put = ((self.K * np.exp(-self.r * self.T)
+                * st.norm.cdf(-d2, 0.0, 1.0)) - self.S0 *
+               st.norm.cdf(-d1, 0.0, 1.0))
+
+        return put
+
+    def asian_call_price(self, t=0) :
+        """
+        """
+        N = self.steps
+        sigma = self.sigma * np.sqrt(((N + 1) * (2 * N + 1)) / (6 * N ** 2))
+        b = ((N + 1) / (2 * N)) * (self.r - 0.5 * (sigma ** 2))
+
+        d1 = ((np.log(self.K / self.S0) + (b + 0.5 * self.sigma ** 2) * (self.T - t)) /
+              (sigma * np.sqrt(self.T - t)))
+
+        d2 = d1 - sigma * np.sqrt(self.T - t)
+
+        call = (self.S0 * np.exp((b - self.r) * self.T) * st.norm.cdf(d1, 0.0, 1.0) - self.K *
+                np.exp(-self.r * self.T) * st.norm.cdf(d2, 0.0, 1.0))
+
+        return call
+
+    def asian_put_price(self, t=0) :
+        """
+        """
+        N = self.steps
+        sigma = self.sigma * np.sqrt(((N + 1) * (2 * N + 1)) / (6 * N ** 2))
+        b = ((N + 1) / (2 * N)) * (self.r - 0.5 * (sigma ** 2))
+
+        d1 = ((np.log(self.K / self.S0) + (b + 0.5 * sigma ** 2) * (self.T - t)) /
+              (sigma * np.sqrt(self.T - t)))
+
+        d2 = d1 - (sigma * np.sqrt(self.T - t))
+
+        put = self.K * np.exp(-self.r * self.T) * st.norm.cdf(-d2, 0.0, 1.0) - (
+                    self.S0 * np.exp((b - self.r) * self.T) * st.norm.cdf(-d1, 0.0, 1.0))
+        return put
+
+    def create_price_path(self):
+        """
+        """
+        for i in range(self.steps):
+            self.price_path[i] = self.price
+            dS = self.r * self.price * self.dt + self.sigma * \
+                self.price * np.random.normal(0, 1) * np.sqrt(self.dt)
+
+            self.price += dS
 
 
 class FdMesh:
 
-    def __init__(self, s_min, s_max, ds, t_max, dt, r=0.06, sigma=0.2):
+    def __init__(self, s_min, s_max, ds, t_max, dt, r=0.06, sigma=0.2, strike=100):
         assert s_max !=0 , "s_max needs to be greater than 0 !!"
 
+        self.strike = strike
         self.sigma =sigma
         self.r = r
         self.s_max = s_max
@@ -32,29 +119,33 @@ class FdMesh:
         self.A = np.zeros((self.n_steps_s, self.n_steps_s))
         self.K = np.zeros(self.n_steps_s)
 
-    def initialize_FTCS(self):
+    def initialize_FTCS(self, option='put'):
         """Setup, boundarie conditions are set to aviod 100 variables"""
         first = [{'value': -1, 'offset': 1}, {'value': 1, 'offset': -1}]
         second = [{'value': 2, 'offset': 0}, {'value': 1, 'offset': -1}, {'value': 1, 'offset': 1}]
 
         # Extra term for boundary in first order matrix approx
         extra1 = np.zeros(self.n_steps_s)
-        extra1[-1] = np.exp(self.t_max)
+        # extra1[-1] = np.exp(self.t_max)
 
         # Extra term for boundary in second order matrix approx
         extra2 = np.zeros(self.n_steps_s)
-        extra2[-1] = np.exp(self.t_max) * (2/self.dt)
+        # extra2[-1] = np.exp(self.t_max) * (2/self.dt)
 
         # second and first order approximations in  matrix form with boundaries given
         part1 = self.tri_diag_matrix_func(0, 0, 0, 0, first, printing=True) * (1 / (self.ds * 2)) + extra1
         part2 = self.tri_diag_matrix_func(0, 0, 2, -2, second, printing=True) * (1 / (self.ds ** 2)) + extra2
 
         # K- term, interest and the A matrix price movement
-        self.K += np.exp(self.r)
+        self.K += self.r
         self.A = (self.r - ((self.sigma ** 2) / 2)) * part1 + ((self.sigma ** 2) / 2) * part2
 
         # First layer in the grid
-        self.grid[:, 0] = np.arange(self.s_min, self.s_max, self.ds)[::-1]
+        stock_prices = np.arange(self.s_min, self.s_max, self.ds)[::-1]
+        if option == 'put':
+            first = np.array([max(0, i - self.strike) for i in stock_prices])
+
+        self.grid[:, 0] = first
 
         # Show initial grid
         print("Initial")
@@ -66,8 +157,8 @@ class FdMesh:
         '''Forward approximation using the matrixes'''
         # Get old values and calculate new ones
         V_n = self.grid[:, j - 1]
-        deltas = self.dt * (np.dot(V_n, self.A)+ self.K)
-        V = V_n + deltas
+        deltas = np.dot(V_n, self.A)
+        V = V_n + self.dt * (deltas - self.K * V_n)
 
         # Save new values and delta
         self.grid[:, j] = V

@@ -11,7 +11,7 @@ from FD_mesh import FdMesh
 
 
 # FD_mesh(S_max,dS,T_max,dT)
-Grid = FdMesh(80, 120, 5, 1, 0.2)
+Grid = FdMesh(80, 120, 5, 1, 0.0001)
 Grid.run()
 
 
