@@ -11,10 +11,15 @@ from FD_mesh import FdMesh
 
 
 # FD_mesh(S_max,dS,T_max,dT)
-Grid = FdMesh(80, 120, 5, 1, 0.0001)
+Grid = FdMesh(80, 120, 3, 1, 0.02)
 Grid.run()
 
+x=plt.pcolor(Grid.grid)
+plt.colorbar(x)
 
+plt.show()
+
+print(Grid)
 
 # first = [{'value': -1, 'offset': 1}, {'value': 1, 'offset': -1}]
 # second = [{'value': 2, 'offset': 0}, {'value': 1, 'offset': -1}, {'value': 1, 'offset': 1}]

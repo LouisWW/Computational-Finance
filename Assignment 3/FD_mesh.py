@@ -99,10 +99,9 @@ class BlackScholes:
 
 class FdMesh:
 
-    def __init__(self, s_min, s_max, ds, t_max, dt, r=0.06, sigma=0.2, strike=100):
+    def __init__(self, s_min, s_max, ds, t_max, dt, r=0.06, sigma=0.2):
         assert s_max !=0 , "s_max needs to be greater than 0 !!"
 
-        self.strike = strike
         self.sigma =sigma
         self.r = r
         self.s_max = s_max
