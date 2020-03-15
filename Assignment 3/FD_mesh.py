@@ -141,10 +141,11 @@ class FdMesh:
         part2 = self.tri_diag_matrix_func(0, 0, 2, -2, second, printing=True) * (1 / (self.ds ** 2))
 
         # K- term, interest and the A matrix price movement
-        self.A1 = (self.r - ((self.sigma ** 2) / 2)) * part1
-        self.A2 = ((self.sigma ** 2) / 2) * part2
+        self.K += self.r
+        self.A = (self.r - ((self.sigma ** 2) / 2)) * part1 + ((self.sigma ** 2) / 2) * part2
 
         # First layer in the grid
+        stock_prices = np.arange(self.s_min, self.s_max, self.ds)[::-1]
         if option == 'put':
             first = np.array([max(0, i - self.strike) for i in stock_prices])
             print([BlackScholes(self.t_max, i, self.strike, self.r, self.sigma).put_price() for i in stock_prices])

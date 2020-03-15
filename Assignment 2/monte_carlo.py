@@ -76,7 +76,6 @@ class monte_carlo:
             price = price * ds
 
 
-
     def antithetic_wiener_method(self):
         """
         """

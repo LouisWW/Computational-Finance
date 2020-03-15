@@ -9,6 +9,43 @@ Louis Weyland, Floris Fok and Julien Fer
 
 import helper as helper
 import numpy as np
+import argparse
+
+
+
+parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
+        description='Price an option based on the Monte Carlo method with variance reduction given the spot price S0, the strike price K, \
+the volatility sigma and the interest rate. \n\n \
+The different - func: \n '
+'-wiener_process : Plots the wiener process \
+-diff_Mc_samples : Computes MC with different number of samples using the default parameter \n \
+-diff_K : Computes MC with different strike price using the default parameter \n \
+-diff_sigma : Computes MC with different implied volatility using the default parameter \n \
+-lr_method : Computes the likelihood ration for discounted payoffs of digital option \n \
+-bump_and_revalue : Use bump and revalue method to determine the Delta \n ' )
+
+parser.add_argument("-func",type = str, default='diff_Mc_samples', help='Defines which function to execute')
+parser.add_argument('-T', type=int,default=1, help='Time to maturity in years (default : 1)')
+parser.add_argument('-S', type=int,default=100, help='Stoke price at the moment (default : 100)')
+parser.add_argument('-K', type=int,default=99, help='Strike price at the moment (default : 99)')
+parser.add_argument('-steps', type=int,default=365, help='Number of updates of the stock market over the year')
+parser.add_argument('-r', type=float,default=0.06, help='interest rate r (default : 0.06)')
+parser.add_argument('-s', type=float, default=0.2, help='volatility s (default : 0.2)')
+parser.add_argument('-option_type', type=str,default='put', help='option type call or put (default : call)')
+parser.add_argument('-market', type=str,default='EU', help='option type EU or USA(default : EU)')
+parser.add_argument('-save_plot',default=False, help='return the plots (default : False)')
+parser.add_argument('-diff_samples',type=int, default=[100,1000,10000,100000,1000000], help='Different number of samples (default: default=[100,1000,10000,100000,1000000])')
+parser.add_argument('-samples',type=int,default=10000,help='Number of samples (default: 10000)')
+parser.add_argument('-different_k',type=int,default=np.linspace(80,130,dtype=int),help='Different strike price (default:80-130)')
+parser.add_argument('-different_s',type=float,default=np.linspace(0.01,1),help='Different volatility from 0 to 1')
+parser.add_argument('-epsilons',type=float,default= [0.01, 0.02, 0.5], help='set epsilon to bump the stock price for the bump and revalue method (default: [0.01, 0.02, 0.5])')
+parser.add_argument('-set_seed',type=str,default='fixed',help='Set a seed (default : fixed or random')
+parser=parser.parse_args()
+
+
+if not parser.func in ['wiener_process','diff_Mc_samples','diff_K','diff_sigma','lr_method','bump_and_revalue'] :
+    print("\n\n\n !!! You need to define a funciton that exists !!!  \n\n\n")
+    raise AssertionError()
 
 
 '''
@@ -18,123 +55,100 @@ Basic Option Valuation :
 - vary the strike price and the volatility
 - estimate the Standard error and accuracy
 '''
+if parser.func == 'wiener_process':
+    helper.plot_wiener_process(parser.T,parser.K, parser.S, parser.r, parser.s, parser.steps, parser.save_plot)
 
-helper.plot_wiener_process(1, 100, 99, 0.06, 0.2, steps=365,save_plot=True)
+elif parser.func == 'diff_Mc_samples':
+    helper.diff_monte_carlo_process(
+        parser.T,
+        parser.S,
+        parser.K,
+        parser.r,
+        parser.s,
+        parser.steps,
+        parser.diff_samples,
+        parser.save_plot)
 
-helper.diff_monte_carlo_process(
-    T=1,
-    S0=100,
-    K=99,
-    r=0.06,
-    sigma=0.2,
-    steps=365,
-    samples=[100,1000,10000,100000,1000000],
-    save_plot=True)
-
-
-helper.diff_K_monte_carlo_process(
-    T=1,
-    different_k=np.linspace(80,130,dtype=int),
-    S0=100,
-    r=0.06,
-    sigma=0.2,
-    steps=365,
-    repetition=10000,
-    save_plot=True)
-
-
-
-helper.diff_sigma_monte_carlo_process(
-    T=1,
-    K=99,
-    S0=100,
-    r=0.06,
-    different_sigma=np.linspace(0.01,1),
-    steps=365,
-    repetition=10000,
-    save_plot=True)
-'''
-Estimation of Sensitivities in MC:
--Compute bump-and-reveal mehtod
--Determine small delta
-- use different/same seed for bumped/unbumped estimate of the value
-- and point 2 use sophisticated method discussed in the lecture
-'''
-
-set_seed = []
-reps = [10000, 100000, 1000000, 10000000]
-# set_seed = [10] * len(reps)
-
-results = helper.LR_method(
-    T=1,
-    S0=100,
-    K=99,
-    r=0.06,
-    sigma=0.2,
-    steps=365,
-    set_seed=set_seed,
-    reps=reps
-)
-deltas, bs_delta, errors, variances = results
-print("Monte Carlo Deltas:")
-print(deltas.round(3))
-print("=================================================")
-print("Black Scholse Deltas:")
-print(round(bs_delta, 3))
-print("=================================================")
-print("Relative Errors:")
-print(errors.round(3))
-print("=================================================")
-
-#epsilons = [0.01, 0.02, 0.5]
-#set_seed = []
-
-epsilons = [0.01 * (x + 1) for x in range(5)]
-set_seed = [10] * len(epsilons)
+elif parser.func == 'diff_K':
+    helper.diff_K_monte_carlo_process(
+        parser.T,
+        parser.different_k,
+        parser.S,
+        parser.r,
+        parser.s,
+        parser.steps,
+        parser.samples,
+        parser.save_plot)
 
 
-results = helper.diff_iter_bump_and_revalue(
-     T=1,
-     S0=100,
-     K=99,
-     r=0.06,
-     sigma=0.2,
-     steps=365,
-     epsilons=epsilons,
-     set_seed=set_seed,
-     iterations=[10000, 100000, 1000000, 10000000],
-     full_output=False,
-     option_type="regular",
-     contract="put",
-     save_output=False
-)
+elif parser.func == 'diff_sigma':
+    helper.diff_sigma_monte_carlo_process(
+        parser.T,
+        parser.K,
+        parser.S,
+        parser.r,
+        parser.different_s,
+        parser.steps,
+        parser.repetition,
+        parser.save_plot)
 
-results = helper.diff_iter_bump_and_revalue(
-    T=1,
-    S0=100,
-    K=99,
-    r=0.06,
-    sigma=0.2,
-    steps=365,
-    epsilons=epsilons,
-    set_seed=set_seed,
-    iterations=[10000, 100000, 1000000, 10000000],
-    full_output=False,
-    option_type="digital",
-    contract="call",
-    save_output=False
-)
+elif parser.func == 'lr_method':
+    parser.set_seed = []
+    if parser.set_seed:
+        set_seed = [10] * len(reps)
 
-deltas, bs_deltas, errors, variances = results
-print("Monte Carlo Deltas:")
-print(deltas.round(3))
-print("=================================================")
-print("Black Scholse Deltas:")
-print(bs_deltas.round(3))
-print("=================================================")
-print("Relative Errors:")
-print(errors.round(3))
-print("=================================================")
+    results = helper.LR_method(
+        parser.T,
+        parser.S,
+        parser.K,
+        parser.r,
+        parser.s,
+        parser.steps,
+        parser.set_seed,
+        parser.diff_samples,
+        parser.option_type
+    )
+    deltas, bs_delta, errors, variances = results
+    print("Monte Carlo Deltas:")
+    print(deltas.round(3))
+    print("=================================================")
+    print("Black Scholse Deltas:")
+    print(bs_delta)
+    print("=================================================")
+    print("Relative Errors:")
+    print(errors.round(3))
+    print("=================================================")
+
+elif parser.func == 'bump_and_revalue':
+    parser.set_seed = []
+    if parser.set_seed:
+        set_seed = [10] * len(reps)
+
+
+    results = helper.diff_iter_bump_and_revalue(
+         parser.T,
+         parser.S,
+         parser.K,
+         parser.r,
+         parser.s,
+         parser.steps,
+         parser.epsilons,
+         parser.set_seed,
+         parser.diff_samples,
+         parser.option_type
+    )
+
+
+    deltas, bs_deltas, errors, variances = results
+    print("Monte Carlo Deltas:")
+    print(deltas.round(3))
+    print("=================================================")
+    print("Black Scholse Deltas:")
+    print(bs_deltas.round(3))
+    print("=================================================")
+    print("Relative Errors:")
+    print(errors.round(3))
+    print("=================================================")
 
 
 '''
