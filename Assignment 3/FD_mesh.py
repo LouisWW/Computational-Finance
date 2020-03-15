@@ -111,54 +111,63 @@ class FdMesh:
         self.t_max = t_max
         self.dt = dt
         self.n_steps_s = len(np.arange(self.s_min, self.s_max, self.ds))
-        self.n_steps_t = int((self.t_max + 1) / dt)
+        self.n_steps_t = int((self.t_max + dt) / dt)
 
         # To make the grid from 0 to T_max/S_max
         self.grid = np.zeros((self.n_steps_s, self.n_steps_t))
         self.delta = np.zeros((self.n_steps_s, self.n_steps_t))
-        self.A = np.zeros((self.n_steps_s, self.n_steps_s))
+        self.A1 = np.zeros((self.n_steps_s, self.n_steps_s))
+        self.A2 = np.zeros((self.n_steps_s, self.n_steps_s))
         self.K = np.zeros(self.n_steps_s)
 
-    def initialize_FTCS(self, option='put'):
+    def initialize_FTCS(self, option='call'):
         """Setup, boundarie conditions are set to aviod 100 variables"""
         first = [{'value': -1, 'offset': 1}, {'value': 1, 'offset': -1}]
         second = [{'value': 2, 'offset': 0}, {'value': 1, 'offset': -1}, {'value': 1, 'offset': 1}]
 
+        # first prices
+        stock_prices = np.arange(self.s_min, self.s_max, self.ds)[: :-1]
+        X_prices = [np.log(i) for i in stock_prices]
+
         # Extra term for boundary in first order matrix approx
-        extra1 = np.zeros(self.n_steps_s)
-        # extra1[-1] = np.exp(self.t_max)
+        self.extra1 = np.zeros(self.n_steps_s)
+        self.extra1[-1] = np.exp(max(X_prices))
 
         # Extra term for boundary in second order matrix approx
-        extra2 = np.zeros(self.n_steps_s)
-        # extra2[-1] = np.exp(self.t_max) * (2/self.dt)
+        self.extra2 = np.zeros(self.n_steps_s)
+        self.extra2[-1] = np.exp(max(X_prices)) * (2 / self.ds)
 
         # second and first order approximations in  matrix form with boundaries given
-        part1 = self.tri_diag_matrix_func(0, 0, 0, 0, first, printing=True) * (1 / (self.ds * 2)) + extra1
-        part2 = self.tri_diag_matrix_func(0, 0, 2, -2, second, printing=True) * (1 / (self.ds ** 2)) + extra2
+        part1 = self.tri_diag_matrix_func(0, 0, 0, 0, first, printing=True) * (1 / (self.ds * 2))
+        part2 = self.tri_diag_matrix_func(0, 0, 2, -2, second, printing=True) * (1 / (self.ds ** 2))
 
         # K- term, interest and the A matrix price movement
-        self.K += self.r
-        self.A = (self.r - ((self.sigma ** 2) / 2)) * part1 + ((self.sigma ** 2) / 2) * part2
+        self.A1 = (self.r - ((self.sigma ** 2) / 2)) * part1
+        self.A2 = ((self.sigma ** 2) / 2) * part2
 
         # First layer in the grid
-        stock_prices = np.arange(self.s_min, self.s_max, self.ds)[::-1]
         if option == 'put':
             first = np.array([max(0, i - self.strike) for i in stock_prices])
+            print([BlackScholes(self.t_max, i, self.strike, self.r, self.sigma).put_price() for i in stock_prices])
+        if option == 'call' :
+            first = np.array([max(self.strike - i, 0) for i in stock_prices])
+            print([BlackScholes(self.t_max, i, self.strike, self.r, self.sigma).call_price() for i in stock_prices])
 
         self.grid[:, 0] = first
 
         # Show initial grid
         print("Initial")
         print(pd.DataFrame(self.grid))
-        print(list(self.K))
+        print(list(stock_prices))
 
 
     def forward_approximation(self, j):
         '''Forward approximation using the matrixes'''
         # Get old values and calculate new ones
         V_n = self.grid[:, j - 1]
-        deltas = np.dot(V_n, self.A)
-        V = V_n + self.dt * (deltas - self.K * V_n)
+        deltas = np.dot(V_n, self.A1) + np.dot(V_n, self.A2) + self.extra1 + self.extra2
+        self.K = np.dot(self.r, V_n)
+        V = V_n + self.dt * (deltas - self.K)
 
         # Save new values and delta
         self.grid[:, j] = V
