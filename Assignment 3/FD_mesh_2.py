@@ -166,12 +166,12 @@ class FdMesh:
             self.A += np.diag(self.beta, 0)
             self.A += np.diag(self.alpha[1:], -1)
             self.A += np.diag(self.gamma[0:-1], 1)
-
+            '''
             anw = input("Do you want to print the Matrix ? y/n")
             if anw == 'y':
                 print("Matrix A")
                 self.print_matrix(self.A)
-
+            '''
 
         elif self.fm_type == 'crank-nicolson':
 
@@ -192,14 +192,14 @@ class FdMesh:
 
             # LU decomposition
             _,self.L,self.U = linalg.lu(self.B)
-
+            '''
             anw = input("Do you want to print the Matrix ? y/n")
             if anw == 'y':
                 print("Matrix A")
                 self.print_matrix(self.A)
                 print("\n\n\nMatrix B")
                 self.print_matrix(self.B)
-
+            '''
 
     def run(self):
 
@@ -220,8 +220,8 @@ class FdMesh:
 
 
             comp_option_price=np.interp(self.S0,self.stock_prices,self.grid[:,0])
-            print("\nThe analytical solution is {0:.3f} for a {1} option \n".format(cal_option_price, self.option))
-            print("\nThe computed solution is {0:.3f} for a {1} option usign the {2} method \n".format( \
+            print("\nThe analytical solution is {0:.3f} for a {1} option ".format(cal_option_price, self.option))
+            print("The computed solution is {0:.3f} for a {1} option usign the {2} method".format( \
                 comp_option_price, self.option, self.fm_type))
 
         elif self.fm_type == 'crank-nicolson':
@@ -239,8 +239,8 @@ class FdMesh:
 
 
             comp_option_price=np.interp(self.S0,self.stock_prices,self.grid[:,0])
-            print("\nThe analytical solution is {0:.3f} for a {1} option \n".format(cal_option_price, self.option))
-            print("\nThe computed solution is {0:.3f} for a {1} option usign the {2} method \n".format( \
+            print("The analytical solution is {0:.3f} for a {1} option ".format(cal_option_price, self.option))
+            print("The computed solution is {0:.3f} for a {1} option usign the {2} method \n".format( \
                 comp_option_price, self.option, self.fm_type))
 
 
