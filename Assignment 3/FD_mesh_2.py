@@ -10,6 +10,7 @@ Louis Weyland, Floris Fok and Julien Fer
 import numpy as np
 import pandas as pd
 import scipy.stats as st
+import scipy.linalg as linalg
 import math
 
 
@@ -101,6 +102,7 @@ class FdMesh:
 
     def __init__(self, s_min, s_max, ds, t_max, dt, S0, K, r, sigma,option='call',fm_type='forward'):
         assert s_max !=0, "s_max needs to be greater than 0 !!"
+        assert fm_type in ['forward','crank-nicolson'], "The finite method needs to be either 'forward' or 'crank-nicolson' "
 
         self.sigma = sigma
         self.K = K
@@ -156,15 +158,14 @@ class FdMesh:
             v=np.arange(1,len(self.stock_prices)-1)
             self.A = np.zeros((self.n_steps_s-2, self.n_steps_s-2))
 
-            alpha = -0.5* self.r * v * self.dt+ 0.5 * self.sigma**2 * self.dt * v**2
-            beta = 1 - self.dt *(self.sigma**2 * v**2 +self.r)
-            gamma = .5 * self.r * v * self.dt + .5 * self.sigma**2 * v**2 * self.dt
+            self.alpha = -0.5 * self.r * v * self.dt+ 0.5 * self.sigma**2 * self.dt * v**2
+            self.beta = 1 - self.dt * (self.sigma**2 * v**2 + self.r)
+            self.gamma = .5 * self.r * v * self.dt + .5 * self.sigma**2 * v**2 * self.dt
 
-            self.A += np.diag(beta,0)
-            self.A += np.diag(alpha[1:],-1)
-            self.A += np.diag(gamma[0:-1],1)
 
-            #offset_coeff = [alpha[0],gamma[-1]]
+            self.A += np.diag(self.beta, 0)
+            self.A += np.diag(self.alpha[1:], -1)
+            self.A += np.diag(self.gamma[0:-1], 1)
 
             anw = input("Do you want to print the Matrix ? y/n")
             if anw == 'y':
@@ -172,11 +173,33 @@ class FdMesh:
                 self.print_matrix(self.A)
 
 
-        elif self.fm_type == 'backward':
-            self.B = np.zeros((self.n_steps_s-2, self.n_steps_s-2))
-            raise
+        elif self.fm_type == 'crank-nicolson':
 
-        #return offset_coeff
+            v = np.arange(1, len(self.stock_prices) - 1)
+            self.A = np.zeros((self.n_steps_s-2, self.n_steps_s-2))
+            self.B = np.zeros((self.n_steps_s-2, self.n_steps_s-2))
+
+            self.alpha = (self.dt/4) * (self.sigma**2 * v**2 - self.r * v)
+            self.beta = (-self.dt/2) * (self.sigma**2 * v**2 + self.r)
+            self.gamma = (self.dt/4) * (self.sigma**2 * v**2 + self.r * v)
+
+            self.A += np.diag(1+self.beta, 0)
+            self.A += np.diag(self.alpha[1:], -1)
+            self.A += np.diag(self.gamma[0:-1], 1)
+            self.B += np.diag(1-self.beta, 0)
+            self.B += np.diag(-self.alpha[1:], -1)
+            self.B += np.diag(-self.gamma[0:-1], 1)
+
+            # LU decomposition
+            _,self.L,self.U = linalg.lu(self.B)
+
+            anw = input("Do you want to print the Matrix ? y/n")
+            if anw == 'y':
+                print("Matrix A")
+                self.print_matrix(self.A)
+                print("\n\n\nMatrix B")
+                self.print_matrix(self.B)
+
 
     def run(self):
 
@@ -194,22 +217,37 @@ class FdMesh:
         if self.fm_type == 'forward':
             for j in range(self.n_steps_t-1, 0, -1):
                 self.grid[1:-1, j-1] = self.A.dot(self.grid[1:-1, j])
-                #self.grid[1, j-1] = self.grid[1, j-1]+off_set[0]*self.grid[0, j]
-                #self.grid[-1, j - 1] = self.grid[-1, j - 1] + off_set[1] * self.grid[-1, j]
 
 
-            comp_option_price=np.interp(self.S0,self.stock_prices,self.grid[:,1])
+            comp_option_price=np.interp(self.S0,self.stock_prices,self.grid[:,0])
             print("\nThe analytical solution is {0:.3f} for a {1} option \n".format(cal_option_price, self.option))
             print("\nThe computed solution is {0:.3f} for a {1} option usign the {2} method \n".format( \
-                comp_option_price,self.option,self.fm_type))
+                comp_option_price, self.option, self.fm_type))
+
+        elif self.fm_type == 'crank-nicolson':
+            inner_grid=np.zeros(self.n_steps_s-2)
+            for j in range(self.n_steps_t - 1, -1, -1):
+
+                inner_grid[0]=self.alpha[1]*self.grid[0,j-1]+self.grid[0,j]
+                inner_grid[-1]=self.gamma[-1]*(self.grid[-1,j-1]+self.grid[-1,j])
+
+                mat_1=(np.dot(self.A,self.grid[1:-1,j])+inner_grid)
+                mat_2=linalg.lstsq(self.L,mat_1)[0]
+                mat_3=linalg.lstsq(self.U,mat_2)[0]
+
+                self.grid[1:-1,j-1]= mat_3
 
 
-
+            comp_option_price=np.interp(self.S0,self.stock_prices,self.grid[:,0])
+            print("\nThe analytical solution is {0:.3f} for a {1} option \n".format(cal_option_price, self.option))
+            print("\nThe computed solution is {0:.3f} for a {1} option usign the {2} method \n".format( \
+                comp_option_price, self.option, self.fm_type))
 
 
 
     def print_matrix(self,matrix):
-        str_matrix ="\n\n"
+
+        str_matrix = "\n\n"
         # To make sure the coordinate (0,0) is at the bottom left
         for i in range(matrix.shape[0]):
             for j in range(matrix.shape[1]):
@@ -228,7 +266,7 @@ class FdMesh:
 
         self.str += " S \ T      "
         for i in np.linspace(0,self.t_max,self.n_steps_t):
-            self.str += '%.3f'% i + "      "
+            self.str += '%.3f' % i + "      "
         self.str += "\n\n"
 
         # To make sure the coordinate (0,0) is at the bottom left
@@ -245,7 +283,7 @@ class FdMesh:
             for j in range(self.grid.shape[1]):
 
                 if self.grid[i][j]<10:
-                    self.str += '%.3f'%(self.grid[i][j])
+                    self.str += '%.3f' % (self.grid[i][j])
                 else:
                     self.str += '%.2f' % (self.grid[i][j])
 
