@@ -8,22 +8,43 @@ Louis Weyland, Floris Fok and Julien Fer
 """
 
 from FD_mesh_2 import FdMesh
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
+from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import matplotlib.pyplot as plt
+import tqdm
 
 import numpy as np
 
 # To test
-def test(s_min=0,s_max=100,ds=1,t_max=1,dt=0.001,S0=50,K=60,r=0.05,sigma=0.2,option='put',fm_type='forward'):
+def test(s_min=0,s_max=100,ds=1,t_max=1,dt=0.1,S0=50,K=60,r=0.1,sigma=0.3,option='call',fm_type='forward'):
     '''
     Test the pde
     :return:
     '''
     Grid = FdMesh(s_min,s_max,ds,t_max,dt,S0,K,r,sigma,option,fm_type)
     Grid.run()
+    #print(Grid)
+
+    X, Y = np.meshgrid(Grid.stock_prices,Grid.t)
+
+    fig = plt.figure()
+    ax = Axes3D(fig)
 
 
 
-def diff_S0(s_min=0,s_max=200,ds=1,t_max=1,dt=(0.0001,0.01),S0=(100,110,120),K=110,r=0.04,sigma=0.3,option='call'):
+    # Plot the surface.
+    ax.plot_surface(X.T, Y.T,Grid.grid, alpha=1, rstride=1, cstride=1, cmap=cm.winter, linewidth=0.5, antialiased=True,
+                    zorder=0.5)
+
+    ax.set_xlabel('S',fontsize=17)
+    ax.set_ylabel('T',fontsize=17)
+    ax.set_zlabel('option price',fontsize=17)
+    plt.show()
+
+
+
+def diff_S0(s_min=0,s_max=300,ds=1,t_max=1,dt=(0.0001,0.01),S0=(100,110,120),K=110,r=0.04,sigma=0.3,option='call'):
     '''
     Compares the Explicit with the Crank-nicolson method using 3 different S0.
     '''
@@ -37,6 +58,7 @@ def diff_S0(s_min=0,s_max=200,ds=1,t_max=1,dt=(0.0001,0.01),S0=(100,110,120),K=1
     Grid_1f.run()
     Grid_1c = FdMesh(s_min,s_max,ds,t_max,dt_2,S0_1,K,r,sigma,option,fm_type='crank-nicolson')
     Grid_1c.run()
+
 
     print("------------------------------------------")
     print("S0={}".format(S0_2))
@@ -54,5 +76,33 @@ def diff_S0(s_min=0,s_max=200,ds=1,t_max=1,dt=(0.0001,0.01),S0=(100,110,120),K=1
     Grid_3c.run()
 
 
-def convergence(s_min=0,s_max=200,t_max=1,S0=50,K=60,r=0.04,sigma=0.2,option='call'):
-    pass
+def convergence(s_min=0, s_max=100, t_max=1, S0=50, K=60, r=0.04, sigma=0.2, option='call', fm_type='forward'):
+
+    ds_list=np.linspace(0.5,5,10)
+    dt_list=np.linspace(1.00000e-03,0.1,10)
+    comp_price_grid=np.zeros((len(ds_list),len(dt_list)))
+
+    for i,ds in tqdm.tqdm(enumerate(ds_list)):
+        for j,dt in enumerate(dt_list):
+            Grid = FdMesh(s_min, s_max,ds, t_max, dt, S0, K, r, sigma, option, fm_type)
+            FM_price = Grid.run()
+            if abs(FM_price) > 5 or np.isnan(FM_price):
+                FM_price = 5
+            comp_price_grid[i][j] = FM_price
+
+    fig = plt.figure()
+    ax = Axes3D(fig)
+
+    X, Y = np.meshgrid(ds_list, dt_list)
+
+    # Plot the surface.
+    ax.plot_surface(X.T, Y.T,comp_price_grid, alpha=1, rstride=1, cstride=1, cmap=cm.winter, linewidth=0.5, antialiased=True,
+                    zorder=0.5)
+
+    ax.set_xlabel('ds',fontsize=17)
+    ax.set_ylabel('dt',fontsize=17)
+    ax.set_zlabel('option price',fontsize=17)
+    plt.show()
+
+
+

@@ -102,7 +102,7 @@ class FdMesh:
 
     def __init__(self, s_min, s_max, ds, t_max, dt, S0, K, r, sigma,option='call',fm_type='forward'):
         assert s_max !=0, "s_max needs to be greater than 0 !!"
-        assert fm_type in ['forward','crank-nicolson'], "The finite method needs to be either 'forward' or 'crank-nicolson' "
+        assert fm_type in ['forward','crank-nicolson','forward2.0'], "The finite method needs to be either 'forward' or 'crank-nicolson' "
 
         self.sigma = sigma
         self.K = K
@@ -146,6 +146,7 @@ class FdMesh:
             self.grid[0, :] = np.array([(self.K - self.s_max) * math.exp(-self.r * t) for t in self.t[::-1]])
 
 
+
     def coefficient(self):
         '''
         Calculate the coefficient derived in Hull, J. C. (2003). Options futures and other derivatives.
@@ -166,6 +167,9 @@ class FdMesh:
             self.A += np.diag(self.beta, 0)
             self.A += np.diag(self.alpha[1:], -1)
             self.A += np.diag(self.gamma[0:-1], 1)
+
+
+            self.coeff=[self.alpha[0],self.alpha[1]]
             '''
             anw = input("Do you want to print the Matrix ? y/n")
             if anw == 'y':
@@ -201,12 +205,21 @@ class FdMesh:
                 self.print_matrix(self.B)
             '''
 
+        elif self.fm_type == 'forward2.0':
+
+            self.dz=self.sigma * np.sqrt(3*self.dt)
+
+            self.alpha = (1/(1+self.r*self.dt))*(-(self.dt/(2*self.dz))*(self.r-(self.sigma**2/2))+(self.dt/(2*self.dz**2)*self.sigma**2))
+            self.beta = (1/(1+self.r*self.dt))*(1-(self.dt/self.dz**2)*self.sigma**2)
+            self.gamma = (1/(1+self.r*self.dt))*((self.dt/(2*self.dz))*(self.r-(self.sigma**2/2))+(self.dt/(2*self.dz**2)*self.sigma**2))
+
+
     def run(self):
 
         if self.option == 'call':
-            cal_option_price=BlackScholes(self.t_max, self.S0, self.K, self.r, self.sigma).call_price()
+            self.cal_option_price=BlackScholes(self.t_max, self.S0, self.K, self.r, self.sigma).call_price()
         elif self.option == 'put':
-            cal_option_price = BlackScholes(self.t_max, self.S0, self.K, self.r, self.sigma).put_price()
+            self.cal_option_price = BlackScholes(self.t_max, self.S0, self.K, self.r, self.sigma).put_price()
 
 
 
@@ -217,10 +230,12 @@ class FdMesh:
         if self.fm_type == 'forward':
             for j in range(self.n_steps_t-1, 0, -1):
                 self.grid[1:-1, j-1] = self.A.dot(self.grid[1:-1, j])
+                self.grid[1,j-1]= self.grid[1,j-1]+ self.coeff[0]*self.grid[0,j]
+                self.grid[-1, j - 1] = self.grid[-1, j - 1] + self.coeff[1] * self.grid[-1, j]
 
 
             comp_option_price=np.interp(self.S0,self.stock_prices,self.grid[:,0])
-            print("\nThe analytical solution is {0:.3f} for a {1} option ".format(cal_option_price, self.option))
+            print("\nThe analytical solution is {0:.3f} for a {1} option ".format(self.cal_option_price, self.option))
             print("The computed solution is {0:.3f} for a {1} option usign the {2} method".format( \
                 comp_option_price, self.option, self.fm_type))
 
@@ -239,11 +254,23 @@ class FdMesh:
 
 
             comp_option_price=np.interp(self.S0,self.stock_prices,self.grid[:,0])
-            print("The analytical solution is {0:.3f} for a {1} option ".format(cal_option_price, self.option))
+            print("The analytical solution is {0:.3f} for a {1} option ".format(self.cal_option_price, self.option))
             print("The computed solution is {0:.3f} for a {1} option usign the {2} method \n".format( \
                 comp_option_price, self.option, self.fm_type))
 
+        elif self.fm_type=='forward2.0':
 
+            for i in range(self.n_steps_t - 2, -1, -1):
+                for j in range(1,self.n_steps_s-1):
+
+                    self.grid[j,i]=self.alpha*self.grid[j-1,i+1]+self.beta*self.grid[j,i+1]+self.gamma*self.grid[j+1,i+1]
+
+            comp_option_price=np.interp(self.S0,self.stock_prices,self.grid[:,0])
+            print("The analytical solution is {0:.3f} for a {1} option ".format(self.cal_option_price, self.option))
+            print("The computed solution is {0:.3f} for a {1} option usign the {2} method \n".format( \
+                comp_option_price, self.option, self.fm_type))
+
+        return comp_option_price
 
     def print_matrix(self,matrix):
 
