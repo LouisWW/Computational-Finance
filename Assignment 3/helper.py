@@ -17,30 +17,47 @@ import tqdm
 import numpy as np
 
 # To test
-def test(s_min=0,s_max=100,ds=1,t_max=1,dt=0.1,S0=50,K=60,r=0.1,sigma=0.3,option='call',fm_type='forward'):
+def test(s_min=0,s_max=200, ds=1, t_max=1, dt=0.001, S0=100, K=100, r=0.04,sigma=0.3, option='call', fm_type='crank-nicolson'):
     '''
     Test the pde
     :return:
     '''
-    Grid = FdMesh(s_min,s_max,ds,t_max,dt,S0,K,r,sigma,option,fm_type)
+
+
+    Grid = FdMesh(s_min, s_max, ds, t_max, dt, S0, K, r, sigma, option, fm_type)
     Grid.run()
-    #print(Grid)
 
-    X, Y = np.meshgrid(Grid.stock_prices,Grid.t)
+    l1 = []
+    l2 = []
+    s = range(10, 195, 5)
+    for i in s:
+        l1.append(Grid.greek(i))
+        l2.append(Grid.delta)
 
-    fig = plt.figure()
-    ax = Axes3D(fig)
+    plt.plot(s, l1, label='PDE', color='blue')
+    plt.plot(s, l2, '--', label='Black-Scholes', color='red')
 
-
-
-    # Plot the surface.
-    ax.plot_surface(X.T, Y.T,Grid.grid, alpha=1, rstride=1, cstride=1, cmap=cm.winter, linewidth=0.5, antialiased=True,
-                    zorder=0.5)
-
-    ax.set_xlabel('S',fontsize=17)
-    ax.set_ylabel('T',fontsize=17)
-    ax.set_zlabel('option price',fontsize=17)
+    plt.legend()
+    plt.xlabel('Stock price', fontsize=17)
+    plt.ylabel('Delta', fontsize=17)
     plt.show()
+    # #print(Grid)
+    #
+    # X, Y = np.meshgrid(Grid.stock_prices,Grid.t)
+    #
+    # fig = plt.figure()
+    # ax = Axes3D(fig)
+    #
+    #
+    #
+    # # Plot the surface.
+    # ax.plot_surface(X.T, Y.T,Grid.grid, alpha=1, rstride=1, cstride=1, cmap=cm.winter, linewidth=0.5, antialiased=True,
+    #                 zorder=0.5)
+    #
+    # ax.set_xlabel('S',fontsize=17)
+    # ax.set_ylabel('T',fontsize=17)
+    # ax.set_zlabel('option price',fontsize=17)
+    # plt.show()
 
 
 
@@ -78,17 +95,19 @@ def diff_S0(s_min=0,s_max=300,ds=1,t_max=1,dt=(0.0001,0.01),S0=(100,110,120),K=1
 
 def convergence(s_min=0, s_max=100, t_max=1, S0=50, K=60, r=0.04, sigma=0.2, option='call', fm_type='forward'):
 
-    ds_list=np.linspace(0.5,5,10)
-    dt_list=np.linspace(1.00000e-03,0.1,10)
-    comp_price_grid=np.zeros((len(ds_list),len(dt_list)))
+    ds_list = np.linspace(5, 0.5, 10)
+    # dt_list = np.array([0.5 ** i for i in range(1, 11)])
+    dt_list = np.linspace(0.1, 10e-4, 10)
 
-    for i,ds in tqdm.tqdm(enumerate(ds_list)):
-        for j,dt in enumerate(dt_list):
-            Grid = FdMesh(s_min, s_max,ds, t_max, dt, S0, K, r, sigma, option, fm_type)
+    comp_price_grid = np.zeros((len(ds_list), len(dt_list)))
+
+    for i, ds in tqdm.tqdm(enumerate(ds_list)):
+        for j, dt in enumerate(dt_list):
+            Grid = FdMesh(s_min, s_max, ds, t_max, dt, S0, K, r, sigma, option, fm_type)
             FM_price = Grid.run()
             if abs(FM_price) > 5 or np.isnan(FM_price):
                 FM_price = 5
-            comp_price_grid[i][j] = FM_price
+            comp_price_grid[j][i] = FM_price
 
     fig = plt.figure()
     ax = Axes3D(fig)
@@ -96,12 +115,12 @@ def convergence(s_min=0, s_max=100, t_max=1, S0=50, K=60, r=0.04, sigma=0.2, opt
     X, Y = np.meshgrid(ds_list, dt_list)
 
     # Plot the surface.
-    ax.plot_surface(X.T, Y.T,comp_price_grid, alpha=1, rstride=1, cstride=1, cmap=cm.winter, linewidth=0.5, antialiased=True,
+    ax.plot_surface(X.T, Y.T, comp_price_grid, alpha=1, rstride=1, cstride=1, cmap=cm.winter, linewidth=0.5, antialiased=True,
                     zorder=0.5)
 
-    ax.set_xlabel('ds',fontsize=17)
-    ax.set_ylabel('dt',fontsize=17)
-    ax.set_zlabel('option price',fontsize=17)
+    ax.set_ylabel('dt', fontsize=17)
+    ax.set_xlabel('ds', fontsize=17)
+    ax.set_zlabel('option price', fontsize=17)
     plt.show()
 
 
