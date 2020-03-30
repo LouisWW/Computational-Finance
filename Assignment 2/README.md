@@ -1,4 +1,4 @@
-# Manuel
+# Documentation
 ------------ 
 
 In this Assignment, the option price is computed using Monte carlo method. The greek delta 
