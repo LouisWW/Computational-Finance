@@ -1,4 +1,4 @@
-# Manuel
+# Documentation
 ------------ 
 
 In this Assignment, the binomial tree is computed and compared to the Black-Scholes solution.
