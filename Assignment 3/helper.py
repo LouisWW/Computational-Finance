@@ -7,7 +7,7 @@ This code was implemented by
 Louis Weyland, Floris Fok and Julien Fer
 """
 
-from FD_mesh_2 import FdMesh
+from FD_mesh import FdMesh
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
@@ -16,6 +16,7 @@ import tqdm
 
 import numpy as np
 
+# To test
 # To test
 def test(s_min=0,s_max=200, ds=1, t_max=1, dt=0.001, S0=100, K=100, r=0.04,sigma=0.3, option='call', fm_type='crank-nicolson'):
     '''
@@ -41,23 +42,20 @@ def test(s_min=0,s_max=200, ds=1, t_max=1, dt=0.001, S0=100, K=100, r=0.04,sigma
     plt.xlabel('Stock price', fontsize=17)
     plt.ylabel('Delta', fontsize=17)
     plt.show()
+
     # #print(Grid)
     #
-    # X, Y = np.meshgrid(Grid.stock_prices,Grid.t)
+    X, Y = np.meshgrid(Grid.stock_prices,Grid.t)
     #
-    # fig = plt.figure()
-    # ax = Axes3D(fig)
-    #
-    #
-    #
-    # # Plot the surface.
-    # ax.plot_surface(X.T, Y.T,Grid.grid, alpha=1, rstride=1, cstride=1, cmap=cm.winter, linewidth=0.5, antialiased=True,
-    #                 zorder=0.5)
-    #
-    # ax.set_xlabel('S',fontsize=17)
-    # ax.set_ylabel('T',fontsize=17)
-    # ax.set_zlabel('option price',fontsize=17)
-    # plt.show()
+    fig = plt.figure()
+    ax = Axes3D(fig)
+
+    ax.plot_surface(X.T, Y.T,Grid.grid, alpha=1, rstride=1, cstride=1, cmap=cm.winter, linewidth=0.5, antialiased=True,
+                    zorder=0.5)
+    ax.set_xlabel('S',fontsize=17)
+    ax.set_ylabel('T',fontsize=17)
+    ax.set_zlabel('option price',fontsize=17)
+    plt.show()
 
 
 

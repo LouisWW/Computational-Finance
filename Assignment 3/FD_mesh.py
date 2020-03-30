@@ -10,6 +10,7 @@ Louis Weyland, Floris Fok and Julien Fer
 import numpy as np
 import pandas as pd
 import scipy.stats as st
+import scipy.linalg as linalg
 import math
 
 
@@ -96,142 +97,246 @@ class BlackScholes:
 
             self.price += dS
 
+    def delta(self, option_type):
+        d1 = (np.log(self.S0 / self.K) + (self.r + 0.5 * self.sigma ** 2)
+              * (self.T)) / (self.sigma * np.sqrt(self.T))
+
+        if option_type == 'call':
+            return st.norm.cdf(d1, 0.0, 1.0)
+
+        elif option_type == 'call':
+            return -st.norm.cdf(d1, 0.0, 1.0)
 
 class FdMesh:
 
-    def __init__(self, s_min, s_max, ds, t_max, dt, r=0.06, sigma=0.2):
-        assert s_max !=0 , "s_max needs to be greater than 0 !!"
+    def __init__(self, s_min, s_max, ds, t_max, dt, S0, K, r, sigma,option='call',fm_type='forward'):
+        assert s_max !=0, "s_max needs to be greater than 0 !!"
+        assert fm_type in ['forward','crank-nicolson','forward2.0'], "The finite method needs to be either 'forward' or 'crank-nicolson' "
 
-        self.sigma =sigma
+        self.sigma = sigma
+        self.K = K
         self.r = r
+        self.S0 = S0
+
         self.s_max = s_max
         self.s_min = s_min
         self.ds = ds
+        self.stock_prices = np.arange(s_min,s_max+ds,ds)  # +ds to include s_max
+
         self.t_max = t_max
         self.dt = dt
-        self.n_steps_s = len(np.arange(self.s_min, self.s_max, self.ds))
-        self.n_steps_t = int((self.t_max + dt) / dt)
+        self.t = np.arange(0,t_max+dt,dt)
+
+        self.option = option
+        self.fm_type = fm_type
+        self.n_steps_s = len(np.arange(s_min, s_max+ds, ds))  # +ds to include s_max
+        self.n_steps_t = len(np.arange(0,(t_max +dt), dt))
 
         # To make the grid from 0 to T_max/S_max
         self.grid = np.zeros((self.n_steps_s, self.n_steps_t))
         self.delta = np.zeros((self.n_steps_s, self.n_steps_t))
-        self.A1 = np.zeros((self.n_steps_s, self.n_steps_s))
-        self.A2 = np.zeros((self.n_steps_s, self.n_steps_s))
-        self.K = np.zeros(self.n_steps_s)
-
-    def initialize_FTCS(self, option='call'):
-        """Setup, boundarie conditions are set to aviod 100 variables"""
-        first = [{'value': -1, 'offset': 1}, {'value': 1, 'offset': -1}]
-        second = [{'value': 2, 'offset': 0}, {'value': 1, 'offset': -1}, {'value': 1, 'offset': 1}]
-
-        # first prices
-        stock_prices = np.arange(self.s_min, self.s_max, self.ds)[: :-1]
-        X_prices = [np.log(i) for i in stock_prices]
-
-        # Extra term for boundary in first order matrix approx
-        self.extra1 = np.zeros(self.n_steps_s)
-        self.extra1[-1] = np.exp(max(X_prices))
-
-        # Extra term for boundary in second order matrix approx
-        self.extra2 = np.zeros(self.n_steps_s)
-        self.extra2[-1] = np.exp(max(X_prices)) * (2 / self.ds)
-
-        # second and first order approximations in  matrix form with boundaries given
-        part1 = self.tri_diag_matrix_func(0, 0, 0, 0, first, printing=True) * (1 / (self.ds * 2))
-        part2 = self.tri_diag_matrix_func(0, 0, 2, -2, second, printing=True) * (1 / (self.ds ** 2))
-
-        # K- term, interest and the A matrix price movement
-        self.K += self.r
-        self.A = (self.r - ((self.sigma ** 2) / 2)) * part1 + ((self.sigma ** 2) / 2) * part2
-
-        # First layer in the grid
-        stock_prices = np.arange(self.s_min, self.s_max, self.ds)[::-1]
-        if option == 'put':
-            first = np.array([max(0, i - self.strike) for i in stock_prices])
-            print([BlackScholes(self.t_max, i, self.strike, self.r, self.sigma).put_price() for i in stock_prices])
-        if option == 'call' :
-            first = np.array([max(self.strike - i, 0) for i in stock_prices])
-            print([BlackScholes(self.t_max, i, self.strike, self.r, self.sigma).call_price() for i in stock_prices])
-
-        self.grid[:, 0] = first
-
-        # Show initial grid
-        print("Initial")
-        print(pd.DataFrame(self.grid))
-        print(list(stock_prices))
 
 
-    def forward_approximation(self, j):
-        '''Forward approximation using the matrixes'''
-        # Get old values and calculate new ones
-        V_n = self.grid[:, j - 1]
-        deltas = np.dot(V_n, self.A1) + np.dot(V_n, self.A2) + self.extra1 + self.extra2
-        self.K = np.dot(self.r, V_n)
-        V = V_n + self.dt * (deltas - self.K)
 
-        # Save new values and delta
-        self.grid[:, j] = V
-        self.delta[:, j] = deltas
+    def init_mesh(self):
+        '''
+        Set the boundary of the grid
+        :return: self.grid
+        '''
+
+        if self.option == 'call':
+            self.grid[:, -1] = np.array([max(0, i - self.K) for i in self.stock_prices])
+            self.grid[0, :] = 0
+            self.grid[-1, :] = np.array([(self.s_max-self.K)*math.exp(-self.r * t) for t in self.t[::-1]])
+
+        elif self.option == 'put':
+            self.grid[:, -1] = np.array([max(0, self.K-i) for i in self.stock_prices])
+            self.grid[-1, :] = 0
+            self.grid[0, :] = np.array([(self.K - self.s_max) * math.exp(-self.r * t) for t in self.t[::-1]])
+
+
+
+    def coefficient(self):
+        '''
+        Calculate the coefficient derived in Hull, J. C. (2003). Options futures and other derivatives.
+        Pearson Education India page 435
+        :return: self.A, offset_coeeficient
+        '''
+
+        if self.fm_type == 'forward':
+
+            v=np.arange(1,len(self.stock_prices)-1)
+            self.A = np.zeros((self.n_steps_s-2, self.n_steps_s-2))
+
+            self.alpha = -0.5 * self.r * v * self.dt + 0.5 * self.sigma**2 * self.dt * v**2
+            self.beta = 1 - self.dt * (self.sigma**2 * v**2 + self.r)
+            self.gamma = .5 * self.r * v * self.dt + .5 * self.sigma**2 * v**2 * self.dt
+
+
+            self.A += np.diag(self.beta, 0)
+            self.A += np.diag(self.alpha[1:], -1)
+            self.A += np.diag(self.gamma[0:-1], 1)
+
+
+            self.coeff=[self.alpha[0],self.alpha[1]]
+            '''
+            anw = input("Do you want to print the Matrix ? y/n")
+            if anw == 'y':
+                print("Matrix A")
+                self.print_matrix(self.A)
+            '''
+
+        elif self.fm_type == 'crank-nicolson':
+
+            v = np.arange(1, len(self.stock_prices) - 1)
+            self.A = np.zeros((self.n_steps_s-2, self.n_steps_s-2))
+            self.B = np.zeros((self.n_steps_s-2, self.n_steps_s-2))
+
+            self.alpha = (self.dt/4) * (self.sigma**2 * v**2 - self.r * v)
+            self.beta = (-self.dt/2) * (self.sigma**2 * v**2 + self.r)
+            self.gamma = (self.dt/4) * (self.sigma**2 * v**2 + self.r * v)
+
+            self.A += np.diag(1+self.beta, 0)
+            self.A += np.diag(self.alpha[1:], -1)
+            self.A += np.diag(self.gamma[0:-1], 1)
+            self.B += np.diag(1-self.beta, 0)
+            self.B += np.diag(-self.alpha[1:], -1)
+            self.B += np.diag(-self.gamma[0:-1], 1)
+
+            # LU decomposition
+            _,self.L,self.U = linalg.lu(self.B)
+            '''
+            anw = input("Do you want to print the Matrix ? y/n")
+            if anw == 'y':
+                print("Matrix A")
+                self.print_matrix(self.A)
+                print("\n\n\nMatrix B")
+                self.print_matrix(self.B)
+            '''
+
+        elif self.fm_type == 'forward2.0':
+
+            self.dz=self.sigma * np.sqrt(3*self.dt)
+
+            self.alpha = (1/(1+self.r*self.dt))*(-(self.dt/(2*self.dz))*(self.r-(self.sigma**2/2))+(self.dt/(2*self.dz**2)*self.sigma**2))
+            self.beta = (1/(1+self.r*self.dt))*(1-(self.dt/self.dz**2)*self.sigma**2)
+            self.gamma = (1/(1+self.r*self.dt))*((self.dt/(2*self.dz))*(self.r-(self.sigma**2/2))+(self.dt/(2*self.dz**2)*self.sigma**2))
+
+
+    def greek(self, greek_stock_value):
+        height = list(self.stock_prices).index(greek_stock_value)
+        # Delta = dV/ds
+        delta = (self.grid[height + 1, -1] - self.grid[height - 1, -1]) / (2 * self.ds)
+        # Gamma = d2v/d2s
+        gamma = (self.grid[height - 1, -1] - (2 * self.grid[height, -1]) + self.grid[height + 1, -1]) / (self.ds ** 2)
+        # Theta = dV/dt
+        theta = (self.grid[height, -2] - self.grid[height, -3]) / self.dt
+
+        B = BlackScholes(self.t_max, greek_stock_value, self.K, self.r, self.sigma)
+        self.delta = B.delta(self.option)
+
+        return delta
 
     def run(self):
+
+        B = BlackScholes(self.t_max, self.S0, self.K, self.r, self.sigma)
+        self.delta = B.delta(self.option)
+
+        if self.option == 'call':
+            self.cal_option_price = B.call_price()
+        elif self.option == 'put':
+            self.cal_option_price = B.put_price()
+
         # Setup
-        self.initialize_FTCS()
+        self.init_mesh()
+        self.coefficient()
 
-        # Loop, forward
-        for j in range(1, self.grid.shape[1]):
-            self.forward_approximation(j)
+        if self.fm_type == 'forward':
+            for j in range(self.n_steps_t-1, 0, -1):
+                self.grid[1:-1, j-1] = self.A.dot(self.grid[1:-1, j])
+                self.grid[1,j-1]= self.grid[1,j-1]+ self.coeff[0]*self.grid[0,j]
+                self.grid[-1, j - 1] = self.grid[-1, j - 1] + self.coeff[1] * self.grid[-1, j]
 
-        # show results
-        print("Final")
-        print(pd.DataFrame(self.grid))
+            comp_option_price=np.interp(self.S0,self.stock_prices,self.grid[:,0])
+            print("\nThe analytical solution is {0:.3f} for a {1} option ".format(self.cal_option_price, self.option))
+            print("The computed solution is {0:.3f} for a {1} option usign the {2} method".format( \
+                comp_option_price, self.option, self.fm_type))
 
+        elif self.fm_type == 'crank-nicolson':
+            inner_grid=np.zeros(self.n_steps_s-2)
+            for j in range(self.n_steps_t - 1, -1, -1):
 
-    def first_derivitive_space(self, i, j):
-        """Forward approximation of first derivative with respect to space:"""
-        return (self.grid[i][j + 1] - self.grid[i][j - 1]) / (2 * self.ds)
+                inner_grid[0]=self.alpha[1]*self.grid[0,j-1]+self.grid[0,j]
+                inner_grid[-1]=self.gamma[-1]*(self.grid[-1,j-1]+self.grid[-1,j])
 
-    def first_derivitive_time(self, i, j):
-        """Forward approximation of first derivative with respect to space:"""
-        return (self.grid[i + 1][j] - self.grid[i - 1][j]) / (2 * self.ds)
+                mat_1=(np.dot(self.A,self.grid[1:-1,j])+inner_grid)
+                mat_2=linalg.lstsq(self.L,mat_1)[0]
+                mat_3=linalg.lstsq(self.U,mat_2)[0]
 
-    def second_derivitive_space(self, i, j):
-        """central approximation of second derivative with respect to space:"""
-        return (self.grid[i][j + 1] - self.grid[i][j] + self.grid[i][j - 1]) / (self.ds ** 2)
+                self.grid[1:-1,j-1]= mat_3
 
-    def tri_diag_matrix_func(self, k1, k2, k3, k4, offsets, printing=False):
+            comp_option_price=np.interp(self.S0,self.stock_prices,self.grid[:,0])
+            # print("The analytical solution is {0:.3f} for a {1} option ".format(self.cal_option_price, self.option))
+            # print("The computed solution is {0:.3f} for a {1} option usign the {2} method \n".format( \
+            #     comp_option_price, self.option, self.fm_type))
 
-        # initialize
-        tri_diag_matrix = np.zeros((self.n_steps_s, self.n_steps_s))
+        elif self.fm_type=='forward2.0':
 
-        # add offset with correct values over the given diagonal
-        for set in offsets:
-            array_len = (tri_diag_matrix.shape[1] - abs(set['offset']))
-            tri_diag_matrix += np.diag([set['value']] * array_len, set['offset'])
+            for i in range(self.n_steps_t - 2, -1, -1):
+                for j in range(1,self.n_steps_s-1):
 
-        # the size of the matrix depends only on the number of discrete stock prices
-        tri_diag_matrix[0][0] = k1
-        tri_diag_matrix[0][1] = k2
-        tri_diag_matrix[-1][-2] = k3
-        tri_diag_matrix[-1][-1] = k4
+                    self.grid[j,i]=self.alpha*self.grid[j-1,i+1]+self.beta*self.grid[j,i+1]+self.gamma*self.grid[j+1,i+1]
 
-        # For testing
-        if printing:
-            print("matrix A")
-            print(pd.DataFrame(tri_diag_matrix))
+            comp_option_price=np.interp(self.S0,self.stock_prices,self.grid[:,0])
+            # print("The analytical solution is {0:.3f} for a {1} option ".format(self.cal_option_price, self.option))
+            # print("The computed solution is {0:.3f} for a {1} option usign the {2} method \n".format( \
+            #     comp_option_price, self.option, self.fm_type))
 
-        return tri_diag_matrix
+        return comp_option_price
 
+    def print_matrix(self,matrix):
 
+        str_matrix = "\n\n"
+        # To make sure the coordinate (0,0) is at the bottom left
+        for i in range(matrix.shape[0]):
+            for j in range(matrix.shape[1]):
+
+                str_matrix += '%.3f' % matrix[i][j]
+                str_matrix += "      "
+            str_matrix += "\n"
+
+        str_matrix += "\n\n\n\n"
+
+        print(str_matrix)
 
     def __str__(self):
 
-        self.str="\n\n Finite Difference mesh \n\n"
+        self.str="Finite Difference Mesh for {} option \n\n".format(self.option)
+
+        self.str += " S \ T      "
+        for i in np.linspace(0,self.t_max,self.n_steps_t):
+            self.str += '%.3f' % i + "      "
+        self.str += "\n\n"
+
         # To make sure the coordinate (0,0) is at the bottom left
         for i in range(self.grid.shape[0]-1,-1,-1):
+            if self.stock_prices[i]<100 and self.stock_prices[i]>=10:
+                self.str += '%.3f' % self.stock_prices[i]
+            elif self.stock_prices[i]<10:
+                self.str += '%.4f' % self.stock_prices[i]
+            else:
+                self.str += '%.2f' % self.stock_prices[i]
+
+            self.str += "      "
+
             for j in range(self.grid.shape[1]):
 
-                self.str += str(self.grid[i][j])
-                self.str += "  "
+                if self.grid[i][j]<10:
+                    self.str += '%.3f' % (self.grid[i][j])
+                else:
+                    self.str += '%.2f' % (self.grid[i][j])
+
+                self.str += "      "
             self.str += "\n"
 
         self.str += "\n\n\n\n"

@@ -33,5 +33,5 @@ s_min=0,s_max=200,ds=1,t_max=1,dt=(0.00001,0.01),S0=(100,110,120),K=110,r=0.04,s
 #helper.diff_S0()
 
 
-# helper.convergence(fm_type='crank-nicolson')
+#helper.convergence(fm_type='crank-nicolson')
 
