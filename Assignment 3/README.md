@@ -1,10 +1,10 @@
 # Documentation
 ------------ 
 
-In this Assignment, the PDE is used to price the options. In the main, 3 different functions can be called from main.
+In this Assignment, the PDE is used to price the options. In the main, 3 different functions can be called from the main.
 
-The first function is called **test** which return the option price, the different greeks and the visualisation of the grid based on the optimal parameters
-  
+The first function is called **test** which returns the option price, the different greeks and the visualisation of the grid based on the optimal parameters
+
     s_min=0,s_max=200, ds=1, t_max=1, dt=0.001, S0=100, K=100, r=0.04,sigma=0.3, option='call', fm_type='crank-nicolson'
 
 
